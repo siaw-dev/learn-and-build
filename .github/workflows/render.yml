@@ -1,0 +1,48 @@
+name: Render README
+
+on:
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+  # Auto-trigger when knowledge.json is updated directly
+  push:
+    paths:
+      - "data/knowledge.json"
+      - "templates/awesome_readme.md.j2"
+
+concurrency:
+  group: knowledge-curator-render
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Render README
+        run: python3 ingest.py render --store json
+
+      - name: Commit README
+        run: |
+          git config user.name "Knowledge Curator Bot"
+          git config user.email "knowledge-curator@github-actions.local"
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "ℹ️  README already up to date."
+          else
+            git commit -m "docs: regenerate awesome list README"
+            git push
+          fi

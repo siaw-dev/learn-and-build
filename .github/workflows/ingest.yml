@@ -1,0 +1,88 @@
+name: Ingest URLs
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "URLs to ingest (one per line — GitHub, YouTube, or any webpage)"
+        required: true
+        type: string
+
+# Prevent concurrent runs from conflicting on knowledge.json
+concurrency:
+  group: knowledge-curator-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to commit knowledge.json + README.md back to repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Ingest URLs
+        env:
+          # Gemini API key pool — all 8 slots, only set ones will be used
+          GEMINI_KEY_1: ${{ secrets.GEMINI_KEY_1 }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_KEY_2 }}
+          GEMINI_KEY_3: ${{ secrets.GEMINI_KEY_3 }}
+          GEMINI_KEY_4: ${{ secrets.GEMINI_KEY_4 }}
+          GEMINI_KEY_5: ${{ secrets.GEMINI_KEY_5 }}
+          GEMINI_KEY_6: ${{ secrets.GEMINI_KEY_6 }}
+          GEMINI_KEY_7: ${{ secrets.GEMINI_KEY_7 }}
+          GEMINI_KEY_8: ${{ secrets.GEMINI_KEY_8 }}
+        run: |
+          echo "🚀 Starting ingestion batch..."
+          SAVED=0
+          FAILED=0
+          while IFS= read -r url; do
+            url="$(echo "$url" | tr -d '[:space:]')"
+            [ -z "$url" ] && continue
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "→ Ingesting: $url"
+            if python3 ingest.py ingest --url "$url" --store json; then
+              SAVED=$((SAVED+1))
+            else
+              echo "⚠️  Failed: $url"
+              FAILED=$((FAILED+1))
+            fi
+          done <<< "${{ github.event.inputs.urls }}"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Batch complete: $SAVED saved, $FAILED failed"
+
+      - name: Render README
+        run: python3 ingest.py render --store json
+
+      - name: Show stats
+        run: python3 ingest.py status --store json
+
+      - name: Commit and push results
+        run: |
+          git config user.name "Knowledge Curator Bot"
+          git config user.email "knowledge-curator@github-actions.local"
+          git add data/knowledge.json README.md
+          # Only commit if there are staged changes
+          if git diff --cached --quiet; then
+            echo "ℹ️  No changes to commit — all URLs were already in the knowledge base."
+          else
+            TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+            git commit -m "feat: ingest batch — $TIMESTAMP"
+            git push
+            echo "🚀 Pushed updated knowledge base to repository."
+          fi

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🤖 Awesome Android Root & Kernel</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Setup Modal ───────────────────────────────────────────────────── -->
+  <div id="setup-overlay" class="overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+      <h2 id="setup-title">⚙️ First-Time Setup</h2>
+      <p class="modal-desc">
+        This dashboard uses <strong>GitHub Actions</strong> to process URLs.
+        Enter your repository details and a GitHub token to get started.
+        Your token is stored only in this browser — never sent anywhere except GitHub's API.
+      </p>
+
+      <label for="setup-owner">GitHub Username / Org</label>
+      <input id="setup-owner" type="text" placeholder="your-github-username" autocomplete="off" />
+
+      <label for="setup-repo">Repository Name</label>
+      <input id="setup-repo" type="text" placeholder="awesome-android-root-kernel" autocomplete="off" />
+
+      <label for="setup-pat">
+        GitHub PAT
+        <span class="hint">
+          <a href="https://github.com/settings/tokens/new?scopes=workflow" target="_blank" rel="noopener">
+            Create one here
+          </a>
+          — needs <code>workflow</code> scope only
+        </span>
+      </label>
+      <input id="setup-pat" type="password" placeholder="github_pat_..." autocomplete="off" />
+
+      <div class="modal-actions">
+        <button id="setup-save" class="btn btn-primary">Save &amp; Connect</button>
+      </div>
+      <p id="setup-error" class="error hidden"></p>
+    </div>
+  </div>
+
+  <!-- ── Header ────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="logo">🤖</span>
+        <div>
+          <h1>Awesome Android Root &amp; Kernel</h1>
+          <p class="tagline">AI-curated knowledge base — auto-ingested from GitHub, YouTube &amp; the web</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="entry-count" class="badge">— entries</span>
+        <a id="repo-link" href="#" target="_blank" rel="noopener" class="btn btn-ghost">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View Repo
+        </a>
+        <button id="settings-btn" class="btn btn-ghost" title="Settings">⚙️</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main Layout ────────────────────────────────────────────────────── -->
+  <main>
+
+    <!-- Ingest Panel -->
+    <section id="ingest-section">
+      <div class="panel">
+        <h2>📥 Ingest Resources</h2>
+        <p class="panel-desc">Paste one or more URLs below (one per line). GitHub repos, YouTube videos, and web articles are all supported.</p>
+
+        <div class="ingest-input-row">
+          <textarea
+            id="url-input"
+            placeholder="https://github.com/tiann/KernelSU&#10;https://www.youtube.com/watch?v=...&#10;https://xda-developers.com/some-article"
+            rows="4"
+            spellcheck="false"
+          ></textarea>
+          <div class="ingest-controls">
+            <button id="ingest-btn" class="btn btn-primary" disabled>
+              <span class="btn-icon">🚀</span>
+              <span id="ingest-btn-label">Ingest</span>
+            </button>
+            <button id="clear-btn" class="btn btn-ghost" title="Clear input">✕ Clear</button>
+          </div>
+        </div>
+
+        <div id="ingest-status" class="status-bar hidden">
+          <span id="status-icon">⏳</span>
+          <span id="status-text">Triggering workflow...</span>
+          <a id="run-link" href="#" target="_blank" rel="noopener" class="run-link hidden">View run →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Knowledge Base -->
+    <section id="kb-section">
+      <div class="kb-layout">
+
+        <!-- Sidebar Filters -->
+        <aside id="sidebar">
+          <div class="sidebar-header">
+            <span>Filter</span>
+            <button id="clear-filter" class="btn-link">Show all</button>
+          </div>
+          <div id="filter-list">
+            <button class="filter-btn active" data-category="all">
+              <span class="filter-label">All</span>
+              <span class="filter-count" id="count-all">0</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Entries -->
+        <div id="entries-pane">
+          <div class="entries-toolbar">
+            <input id="search-input" type="search" placeholder="🔍 Search entries..." />
+            <span id="results-label" class="results-label"></span>
+            <button id="refresh-btn" class="btn btn-ghost btn-sm" title="Refresh from GitHub">↺ Refresh</button>
+          </div>
+
+          <div id="entries-grid">
+            <!-- Populated by app.js -->
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Loading knowledge base...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Footer ────────────────────────────────────────────────────────── -->
+  <footer>
+    <span>Powered by <strong>Knowledge Curator</strong> · AI-curated · GitHub Actions backend</span>
+    <span id="last-updated"></span>
+  </footer>
+
+  <!-- ── Toast Notifications ───────────────────────────────────────────── -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

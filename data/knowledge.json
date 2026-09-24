@@ -1,0 +1,40 @@
+[
+  {
+    "url": "https://github.com/tiann/KernelSU",
+    "title": "tiann/KernelSU",
+    "description": "A Kernel based root solution for Android",
+    "source_type": "github",
+    "category": "Root Solutions",
+    "subcategory": null,
+    "tags": [
+      "android",
+      "kernel",
+      "kernelsu",
+      "root",
+      "su"
+    ],
+    "status": "active",
+    "author": "tiann",
+    "stars": 18572,
+    "android_versions": [],
+    "devices": [],
+    "content_hash": "",
+    "ingested_at": "2026-09-24T02:37:54.407087"
+  },
+  {
+    "url": "https://github.com/topjohnwu/Magisk",
+    "title": "topjohnwu/Magisk",
+    "description": "The Magic Mask for Android",
+    "source_type": "github",
+    "category": "Root Solutions",
+    "subcategory": null,
+    "tags": [],
+    "status": "active",
+    "author": "topjohnwu",
+    "stars": 62911,
+    "android_versions": [],
+    "devices": [],
+    "content_hash": "8eae8ed99062bdc93ce9009dcca0900c63a3e558c51579d83b1b54be512fd5ee",
+    "ingested_at": "2026-09-24T02:20:23.466664"
+  }
+]
