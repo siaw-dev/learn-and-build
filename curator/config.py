@@ -34,7 +34,8 @@ README_PATH: Path = _ROOT / "README.md"
 TEMPLATE_PATH: Path = _ROOT / "templates" / "awesome_readme.md.j2"
 
 # ── Models ──────────────────────────────────────────────────────────────────
-GEMINI_MODEL: str = "gemini-2.5-flash"
+GEMINI_MODEL: str = "gemini-3.8-flash"
+
 
 
 

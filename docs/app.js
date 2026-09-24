@@ -389,7 +389,8 @@ Rules:
 - Never use placeholder comments like "// implement here".
 - Cite the exact mechanism or blueprint you based your design on.`;
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
+
 
     const payload = {
       contents: [
