@@ -39,82 +39,53 @@ GEMINI_MODEL: str = "gemini-3.8-flash"
 
 
 
-# ── Taxonomy ────────────────────────────────────────────────────────────────
+# ── Taxonomy (Domain Adaptive) ──────────────────────────────────────────────
 TAXONOMY: dict[str, list[str]] = {
+    # System-Level & Android Internals
     "Root Solutions": [
-        "Magisk",
-        "KernelSU",
-        "APatch",
-        "SuperSU",
-        "Systemless Root",
+        "Magisk", "KernelSU", "APatch", "SuperSU", "Systemless Root",
     ],
-    "Bootloader & Fastboot": [
-        "Bootloader Unlock",
-        "Fastboot / Fastbootd",
-        "OEM Unlock",
-        "Relock",
-        "EDL Mode",
+    "Kernel & Low-Level Systems": [
+        "GKI", "Linux Kernel", "Drivers", "eBPF", "Kprobes", "AOSP Kernel", "Custom Kernels",
     ],
-    "Kernel (GKI & Custom)": [
-        "GKI (Generic Kernel Image)",
-        "Custom Kernels",
-        "Kernel Patches",
-        "AOSP Kernel",
-        "KernelSU Integration",
-        "APatch Integration",
+    "Runtime Injection & Hooks": [
+        "Zygisk", "LSPosed", "Xposed", "Frida", "Dobby", "PLT/GOT Hooking", "Inline Hooks",
     ],
-    "Zygote & Hook Frameworks": [
-        "Zygisk",
-        "LSPosed",
-        "Xposed Framework",
-        "Riru",
-        "Hook APIs",
+    "Bootloaders & Partitions": [
+        "Bootloader Unlock", "Fastboot", "AVB (Android Verified Boot)", "EDL", "Partition Tables",
     ],
-    "Modules & Overlays": [
-        "Magisk Modules",
-        "KernelSU Modules",
-        "APatch Modules",
-        "Systemless Overlays",
+    "Security & Reverse Engineering": [
+        "Play Integrity / SafetyNet", "Anti-Cheat", "Binary Analysis", "Ghidra", "Memory Patching",
     ],
-    "Recovery": [
-        "TWRP",
-        "OrangeFox",
-        "SHRP",
-        "Custom Recovery",
-        "A/B Partition Recovery",
+    # General Engineering Domains
+    "AI, Agents & Machine Learning": [
+        "Autonomous Agents", "LLM Pipelines", "Inference Engines", "Vector Stores", "MCP Servers",
     ],
-    "Forensics & Anti-Detection": [
-        "SafetyNet / Play Integrity",
-        "Root Detection Bypass",
-        "Banking App Bypass",
-        "Anti-Cheat Bypass",
-        "Forensic Analysis",
+    "Compilers & Language Runtimes": [
+        "Bytecode VMs", "JIT Compilers", "AST Analyzers", "Parser Generators", "Linkers",
     ],
-    "Tutorials & Learning": [
-        "Step-by-Step Guides",
-        "Video Tutorials",
-        "Beginner Guides",
-        "Deep Dives",
-        "Development Guides",
+    "Distributed Systems & Storage": [
+        "Databases", "Consensus Protocols", "Message Brokers", "Storage Engines", "Cache Systems",
     ],
-    "Tools & Utilities": [
-        "ADB & Fastboot Scripts",
-        "Payload Dumper",
-        "Partition Tools",
-        "Flashing Tools",
-        "Analysis Tools",
+    "Web Architecture & Protocols": [
+        "HTTP/3", "WebSockets", "gRPC", "API Gateways", "High-Performance Servers",
     ],
-    "Device-Specific": [
-        "Samsung (Exynos / Qualcomm)",
-        "Qualcomm Snapdragon",
-        "MediaTek (MTK)",
-        "Google Pixel",
-        "OnePlus / OPPO",
-        "Xiaomi / MIUI",
+    "Embedded & Firmware": [
+        "Microcontrollers", "RTOS", "Hardware Protocols (SPI/I2C/UART)", "IoT Security",
+    ],
+    "Modules & Extensions": [
+        "Magisk Modules", "KernelSU Modules", "System Overlays", "Plugins",
+    ],
+    "Tools, CLI & Utilities": [
+        "ADB Scripts", "Payload Dumpers", "Build Systems", "Developer Tooling",
+    ],
+    "Tutorials & Deep Dives": [
+        "Architecture Walkthroughs", "Technical Video Breakdowns", "Explorations",
     ],
 }
 
 ALL_CATEGORIES: list[str] = list(TAXONOMY.keys())
+
 
 # ── Status emoji map ────────────────────────────────────────────────────────
 STATUS_EMOJI: dict[str, str] = {

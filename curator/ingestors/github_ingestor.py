@@ -60,9 +60,35 @@ def _get_readme(owner: str, repo: str, token: str | None = None) -> str:
     return content
 
 
+def _get_tree_summary(owner: str, repo: str, default_branch: str, token: str | None = None) -> str:
+    """Fetch top-level and key source paths from GitHub tree API."""
+    headers = dict(_HEADERS)
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        resp = requests.get(
+            f"{_GITHUB_API}/repos/{owner}/{repo}/git/trees/{default_branch}?recursive=1",
+            headers=headers,
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return ""
+        tree = resp.json().get("tree", [])
+        # Filter for meaningful paths, up to 60 paths
+        paths = [
+            item["path"] for item in tree
+            if not any(item["path"].startswith(p) for p in (".github", "test", "docs", ".git"))
+        ][:60]
+        return "\n".join(paths)
+    except Exception:
+        return ""
+
+
 def ingest_github_repo(url: str, token: str | None = None) -> KnowledgeEntry:
     """
     Ingest a GitHub repository by URL.
+
 
     Args:
         url:   Full GitHub URL, e.g. https://github.com/topjohnwu/Magisk
@@ -97,7 +123,10 @@ def ingest_github_repo(url: str, token: str | None = None) -> KnowledgeEntry:
     elif data.get("disabled"):
         status = EntryStatus.DEPRECATED
 
-    # Build raw content block for classifier
+    default_branch = data.get("default_branch", "main")
+    tree_summary = _get_tree_summary(owner, repo, default_branch, token)
+
+    # Build raw content block for classifier and blueprint extractor
     raw_content = "\n\n".join(filter(None, [
         f"Name: {data.get('full_name', '')}",
         f"Description: {data.get('description', '')}",
@@ -105,8 +134,10 @@ def ingest_github_repo(url: str, token: str | None = None) -> KnowledgeEntry:
         f"Language: {data.get('language', '')}",
         f"Stars: {data.get('stargazers_count', 0)}",
         f"License: {(data.get('license') or {}).get('spdx_id', 'Unknown')}",
+        f"Repository File Tree:\n{tree_summary}" if tree_summary else "",
         f"README excerpt:\n{readme_excerpt}",
     ]))
+
 
     return KnowledgeEntry(
         url=url.rstrip("/"),
