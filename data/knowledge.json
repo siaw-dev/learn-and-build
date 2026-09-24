@@ -1,5 +1,87 @@
 [
   {
+    "url": "https://github.com/bytecodealliance/wasmtime",
+    "title": "bytecodealliance/wasmtime",
+    "description": "A lightweight WebAssembly runtime that is fast, secure, and standards-compliant",
+    "source_type": "github",
+    "category": "Compilers & Language Runtimes",
+    "subcategory": "JIT Compilers",
+    "tags": [
+      "webassembly",
+      "wasm",
+      "runtime",
+      "rust",
+      "cranelift",
+      "jit",
+      "sandbox"
+    ],
+    "status": "active",
+    "author": "bytecodealliance",
+    "stars": 18656,
+    "android_versions": [],
+    "devices": [
+      "all"
+    ],
+    "blueprint_file": "blueprints/wasmtime.md",
+    "blueprint_status": "verified",
+    "content_hash": "b1a9fa0880e78c92f3ab2d2c81bfd93fa4bf8054de82c789bf29292e0425df91",
+    "ingested_at": "2026-09-24T20:04:47.751818"
+  },
+  {
+    "url": "https://github.com/tokio-rs/tokio",
+    "title": "tokio-rs/tokio",
+    "description": "A runtime for writing reliable asynchronous applications with Rust. Provides I/O, networking, scheduling, timers, ...",
+    "source_type": "github",
+    "category": "Compilers & Language Runtimes",
+    "subcategory": "Bytecode VMs",
+    "tags": [
+      "rust",
+      "asynchronous",
+      "runtime",
+      "networking",
+      "concurrency",
+      "io"
+    ],
+    "status": "active",
+    "author": "tokio-rs",
+    "stars": 33228,
+    "android_versions": [],
+    "devices": [
+      "all"
+    ],
+    "blueprint_file": "blueprints/tokio.md",
+    "blueprint_status": "verified",
+    "content_hash": "f4648552f7ba287a2bfb84527fe64c577e277edee7265c3e2e2c7bc7d59e4759",
+    "ingested_at": "2026-09-24T20:04:32.651387"
+  },
+  {
+    "url": "https://github.com/hashicorp/raft",
+    "title": "hashicorp/raft",
+    "description": "Golang implementation of the Raft consensus protocol",
+    "source_type": "github",
+    "category": "Distributed Systems & Storage",
+    "subcategory": "Consensus Protocols",
+    "tags": [
+      "raft",
+      "consensus",
+      "distributed systems",
+      "golang",
+      "replicated state machine",
+      "replication"
+    ],
+    "status": "active",
+    "author": "hashicorp",
+    "stars": 9136,
+    "android_versions": [],
+    "devices": [
+      "all"
+    ],
+    "blueprint_file": "blueprints/raft.md",
+    "blueprint_status": "verified",
+    "content_hash": "708672675905cadf7cb419d91a97c1fe38d02aef7db163c262c1d4b869bbea08",
+    "ingested_at": "2026-09-24T20:05:01.043424"
+  },
+  {
     "url": "https://github.com/libbpf/libbpf",
     "title": "libbpf/libbpf",
     "description": "Automated upstream mirror for libbpf stand-alone build.",
