@@ -84,6 +84,7 @@ jobs:
           else
             TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
             git commit -m "feat: ingest batch — $TIMESTAMP"
+            git pull --rebase origin main
             git push
             echo "🚀 Pushed updated knowledge base to repository."
           fi
