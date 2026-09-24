@@ -14,7 +14,8 @@
     "devices": [],
     "blueprint_file": "blueprints/android_root_apps__modules___rooting_guides___awesome_android_root.md",
     "content_hash": "f70f1bb52b383c8c21c47b151f1f78e9abb9919afa8b98155c725db3871a248d",
-    "ingested_at": "2026-09-24T04:01:50.499388"
+    "ingested_at": "2026-09-24T04:01:50.499388",
+    "blueprint_status": "stub"
   },
   {
     "url": "https://awesome-android-root.zhoe.org/rooting-guides/",
@@ -31,7 +32,8 @@
     "devices": [],
     "blueprint_file": "blueprints/android_rooting_guide___awesome_android_root.md",
     "content_hash": "4aa5adcfc45378711fa8c1b922bf0eb5376781aba0dd651462b464301c11bddd",
-    "ingested_at": "2026-09-24T04:19:37.287994"
+    "ingested_at": "2026-09-24T04:19:37.287994",
+    "blueprint_status": "stub"
   },
   {
     "url": "https://github.com/awesome-android-root/awesome-android-root",
@@ -69,7 +71,8 @@
     "devices": [],
     "blueprint_file": "blueprints/awesome-android-root.md",
     "content_hash": "56e63dbb572e654779bcaf6aa28c204084d57a78d84af95b717ae646916dc0df",
-    "ingested_at": "2026-09-24T04:16:21.870150"
+    "ingested_at": "2026-09-24T04:16:21.870150",
+    "blueprint_status": "stub"
   },
   {
     "url": "https://github.com/tiann/KernelSU",
@@ -92,7 +95,8 @@
     "devices": [],
     "blueprint_file": "blueprints/kernelsu.md",
     "content_hash": "352a03fb7b9e5957a8dc47ca82aac6f2c7ea8728f2f22af4318849084d0bac58",
-    "ingested_at": "2026-09-24T02:37:54.407087"
+    "ingested_at": "2026-09-24T02:37:54.407087",
+    "blueprint_status": "verified"
   },
   {
     "url": "https://github.com/topjohnwu/Magisk",
@@ -109,7 +113,8 @@
     "devices": [],
     "blueprint_file": "blueprints/magisk.md",
     "content_hash": "8eae8ed99062bdc93ce9009dcca0900c63a3e558c51579d83b1b54be512fd5ee",
-    "ingested_at": "2026-09-24T02:20:23.466664"
+    "ingested_at": "2026-09-24T02:20:23.466664",
+    "blueprint_status": "verified"
   },
   {
     "url": "https://github.com/google/guava",
@@ -129,7 +134,8 @@
     "devices": [],
     "blueprint_file": "blueprints/guava.md",
     "content_hash": "0d012134d38ad609505d3b366cb58134d0ca6b91b0b2a5a008186a42992ae3e0",
-    "ingested_at": "2026-09-24T04:43:50.620871"
+    "ingested_at": "2026-09-24T04:43:50.620871",
+    "blueprint_status": "stub"
   },
   {
     "url": "https://github.com/square/retrofit",
@@ -155,6 +161,7 @@
     ],
     "blueprint_file": "blueprints/retrofit.md",
     "content_hash": "49ca62f472e4a2c7dfc076e3882881d810b38448148574907620e071f5a3ed07",
-    "ingested_at": "2026-09-24T04:57:19.847889"
+    "ingested_at": "2026-09-24T04:57:19.847889",
+    "blueprint_status": "verified"
   }
 ]

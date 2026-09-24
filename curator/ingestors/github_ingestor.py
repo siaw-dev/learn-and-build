@@ -75,14 +75,68 @@ def _get_tree_summary(owner: str, repo: str, default_branch: str, token: str | N
         if resp.status_code != 200:
             return ""
         tree = resp.json().get("tree", [])
-        # Filter for meaningful paths, up to 60 paths
         paths = [
             item["path"] for item in tree
-            if not any(item["path"].startswith(p) for p in (".github", "test", "docs", ".git"))
-        ][:60]
-        return "\n".join(paths)
+            if not any(item["path"].startswith(p) for p in (".github", "test", "docs", ".git", "gradle", "node_modules"))
+            and item.get("type") == "blob"
+        ]
+        return paths
     except Exception:
+        return []
+
+
+def _fetch_key_source_snippets(owner: str, repo: str, default_branch: str, paths: list[str]) -> str:
+    """Fetch raw code snippets from 2-3 most critical source/interface files."""
+    if not paths:
         return ""
+
+    # Filter out secondary directories like website, samples, tests
+    core_paths = [
+        p for p in paths
+        if not any(p.lower().startswith(d) for d in ("website/", "site/", "test/", "tests/", "sample/", "samples/"))
+    ] or paths
+
+    # Priority ranking for architectural insight
+    patterns = [
+        # Manifests & specs
+        r"(Cargo\.toml|go\.mod|module\.prop|pom\.xml)$",
+        # C/C++ headers & kernel hooks
+        r"(include/.*\.h|kprobe.*\.c|hook.*\.c|su.*\.c|driver.*\.c)$",
+        # Core interfaces / entrypoints
+        r"(src/lib\.rs|main\.go|.*Client\.(java|kt|py|go)|.*Service\.(java|kt|py|go)|.*Engine\.(java|kt|py|go)|core\.(py|rs|go))$",
+    ]
+
+    selected = []
+    for pattern in patterns:
+        for path in core_paths:
+            if re.search(pattern, path, re.IGNORECASE) and path not in selected:
+                selected.append(path)
+                if len(selected) >= 3:
+                    break
+        if len(selected) >= 3:
+            break
+
+    # If priority matching found nothing, pick top 2 source code files
+    if not selected:
+        for path in paths:
+            if path.endswith((".rs", ".go", ".c", ".h", ".cpp", ".java", ".kt", ".py")):
+                selected.append(path)
+                if len(selected) >= 2:
+                    break
+
+    snippets = []
+    for path in selected[:3]:
+        raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
+        try:
+            r = requests.get(raw_url, timeout=8)
+            if r.status_code == 200 and r.text:
+                # Truncate to first 2500 chars per file
+                code_snippet = r.text[:2500].strip()
+                snippets.append(f"--- File: {path} ---\n{code_snippet}")
+        except Exception:
+            continue
+
+    return "\n\n".join(snippets)
 
 
 def ingest_github_repo(url: str, token: str | None = None) -> KnowledgeEntry:
@@ -124,7 +178,9 @@ def ingest_github_repo(url: str, token: str | None = None) -> KnowledgeEntry:
         status = EntryStatus.DEPRECATED
 
     default_branch = data.get("default_branch", "main")
-    tree_summary = _get_tree_summary(owner, repo, default_branch, token)
+    tree_paths = _get_tree_summary(owner, repo, default_branch, token)
+    tree_summary = "\n".join(tree_paths[:60]) if tree_paths else ""
+    code_snippets = _fetch_key_source_snippets(owner, repo, default_branch, tree_paths)
 
     # Build raw content block for classifier and blueprint extractor
     raw_content = "\n\n".join(filter(None, [
@@ -135,6 +191,7 @@ def ingest_github_repo(url: str, token: str | None = None) -> KnowledgeEntry:
         f"Stars: {data.get('stargazers_count', 0)}",
         f"License: {(data.get('license') or {}).get('spdx_id', 'Unknown')}",
         f"Repository File Tree:\n{tree_summary}" if tree_summary else "",
+        f"Core Source Code Snippets:\n{code_snippets}" if code_snippets else "",
         f"README excerpt:\n{readme_excerpt}",
     ]))
 

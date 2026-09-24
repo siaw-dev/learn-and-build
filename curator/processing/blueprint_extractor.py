@@ -131,17 +131,19 @@ def extract_blueprint(
             rotator = get_rotator()
             markdown_content = rotator.with_retry(_call_extract_blueprint, prompt)
             blueprint_file.write_text(markdown_content, encoding="utf-8")
-            print(f"  📄 Blueprint generated: {blueprint_file.name}")
+            entry.blueprint_status = "verified"
+            print(f"  📄 Blueprint generated (verified): {blueprint_file.name}")
             return blueprint_file
         except Exception as e:
-            print(f"  ⚠️ Blueprint AI extraction error ({type(e).__name__}: {e}). Generating baseline template.")
+            print(f"  ⚠️ Blueprint AI extraction error ({type(e).__name__}: {e}). Generating baseline stub.")
 
-    # Universal fallback template
+    # Universal fallback template (marked explicitly as stub)
+    entry.blueprint_status = "stub"
     baseline = f"""# Blueprint: {entry.title}
 
 > **Source**: [{entry.url}]({entry.url})  
 > **Domain / Category**: {entry.category}  
-> **Status**: {entry.status.value}
+> **Status**: {entry.status.value} (Baseline Stub)
 
 ---
 
@@ -168,5 +170,5 @@ cd $(basename {entry.url})
 - **Target Architectures / Platforms**: {', '.join(entry.devices) if entry.devices else 'Any'}
 """
     blueprint_file.write_text(baseline, encoding="utf-8")
-    print(f"  📄 Baseline blueprint generated: {blueprint_file.name}")
+    print(f"  📄 Baseline stub blueprint generated: {blueprint_file.name}")
     return blueprint_file

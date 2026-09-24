@@ -41,6 +41,7 @@ class KnowledgeEntry(BaseModel):
     android_versions: list[str] = []    # e.g. ["Android 13", "Android 14"]
     devices: list[str] = []             # e.g. ["Qualcomm", "Samsung"]
     blueprint_file: Optional[str] = None # e.g. "blueprints/kernelsu.md"
+    blueprint_status: str = "verified"   # "verified" (AI extracted) | "stub" (baseline fallback)
     raw_content: Optional[str] = None   # Full text (stored in DB, not README)
     content_hash: str = ""              # SHA256 for deduplication
     ingested_at: datetime = datetime.now()
@@ -80,6 +81,7 @@ class KnowledgeEntry(BaseModel):
             "android_versions": ",".join(self.android_versions),
             "devices": ",".join(self.devices),
             "blueprint_file": self.blueprint_file or "",
+            "blueprint_status": self.blueprint_status,
             "raw_content": self.raw_content or "",
             "content_hash": self.content_hash,
             "ingested_at": self.ingested_at.isoformat(),
@@ -102,6 +104,7 @@ class KnowledgeEntry(BaseModel):
             android_versions=row.get("android_versions", ""),
             devices=row.get("devices", ""),
             blueprint_file=row.get("blueprint_file") or None,
+            blueprint_status=row.get("blueprint_status", "verified"),
             raw_content=row.get("raw_content") or None,
             content_hash=row.get("content_hash", ""),
             ingested_at=datetime.fromisoformat(

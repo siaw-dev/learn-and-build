@@ -237,8 +237,9 @@ function renderCards() {
       const bpFile = btn.dataset.blueprint;
       const title = btn.dataset.title;
       const category = btn.dataset.category;
+      const status = btn.dataset.status;
       const sourceUrl = btn.dataset.url;
-      openBlueprintViewer(bpFile, title, category, sourceUrl);
+      openBlueprintViewer(bpFile, title, category, sourceUrl, status);
     });
   });
 }
@@ -278,13 +279,14 @@ function createCardHtml(entry) {
       <div class="card-footer">
         <span class="card-domain-badge">${escHtml(entry.category || 'General')}</span>
         ${entry.blueprint_file ? `
-          <button class="btn-blueprint" 
+          <button class="btn-blueprint ${entry.blueprint_status === 'stub' ? 'stub' : 'verified'}" 
             data-blueprint="${escHtml(entry.blueprint_file)}"
             data-title="${escHtml(entry.title || entry.url)}"
             data-category="${escHtml(entry.category || 'Domain')}"
+            data-status="${escHtml(entry.blueprint_status || 'verified')}"
             data-url="${escHtml(entry.url)}">
             ${ICONS.blueprint}
-            <span>Blueprint</span>
+            <span>${entry.blueprint_status === 'stub' ? 'Baseline Stub' : 'Blueprint'}</span>
           </button>
         ` : ''}
       </div>
@@ -295,7 +297,7 @@ function createCardHtml(entry) {
 // ── Blueprint Modal Viewer ────────────────────────────────────────────────────
 let activeBlueprintRaw = '';
 
-async function openBlueprintViewer(blueprintFile, title, category, sourceUrl) {
+async function openBlueprintViewer(blueprintFile, title, category, sourceUrl, status = 'verified') {
   const modal = document.getElementById('blueprint-modal');
   const titleEl = document.getElementById('bp-modal-title');
   const catBadge = document.getElementById('bp-category-badge');
@@ -306,6 +308,7 @@ async function openBlueprintViewer(blueprintFile, title, category, sourceUrl) {
 
   titleEl.textContent = title;
   catBadge.textContent = category;
+  catBadge.className = `bp-domain-tag ${status === 'stub' ? 'stub' : 'verified'}`;
   sourceLink.href = sourceUrl;
   sourceText.textContent = sourceUrl.replace(/^https?:\/\//, '').split('/')[0] + '/' + (sourceUrl.split('/')[3] || '');
   
@@ -331,7 +334,20 @@ async function openBlueprintViewer(blueprintFile, title, category, sourceUrl) {
       state.blueprintCache.set(blueprintFile, md);
     }
     activeBlueprintRaw = md;
-    body.innerHTML = parseMarkdown(md);
+    
+    let contentHtml = '';
+    if (status === 'stub') {
+      contentHtml += `
+        <div class="bp-stub-banner">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <strong>Baseline Stub</strong>: This blueprint was generated as a structural fallback during API limits. It contains repository metadata, core tags, and clone scaffolding.
+          </div>
+        </div>
+      `;
+    }
+    contentHtml += parseMarkdown(md);
+    body.innerHTML = contentHtml;
   } catch (err) {
     body.innerHTML = `
       <div class="empty-state">

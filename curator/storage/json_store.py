@@ -67,6 +67,7 @@ class JsonStore:
             "android_versions": entry.android_versions,
             "devices": entry.devices,
             "blueprint_file": entry.blueprint_file,
+            "blueprint_status": entry.blueprint_status,
             "content_hash": entry.content_hash,
             "ingested_at": entry.ingested_at.isoformat(),
         }
@@ -86,6 +87,7 @@ class JsonStore:
             android_versions=row.get("android_versions", []),
             devices=row.get("devices", []),
             blueprint_file=row.get("blueprint_file"),
+            blueprint_status=row.get("blueprint_status", "verified"),
             content_hash=row.get("content_hash", ""),
             ingested_at=datetime.fromisoformat(
                 row.get("ingested_at", datetime.now().isoformat())
