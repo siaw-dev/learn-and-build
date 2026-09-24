@@ -1,5 +1,31 @@
 [
   {
+    "url": "https://github.com/libbpf/libbpf",
+    "title": "libbpf/libbpf",
+    "description": "Automated upstream mirror for libbpf stand-alone build.",
+    "source_type": "github",
+    "category": "Kernel & Low-Level Systems",
+    "subcategory": "Linux Kernel",
+    "tags": [
+      "bpf",
+      "libbpf",
+      "tracing",
+      "kernel",
+      "eBPF"
+    ],
+    "status": "active",
+    "author": "libbpf",
+    "stars": 2757,
+    "android_versions": [],
+    "devices": [
+      "all"
+    ],
+    "blueprint_file": "blueprints/libbpf.md",
+    "blueprint_status": "verified",
+    "content_hash": "18878e10ae39b368a610ae6def52def2d29464bda393eb7c5186c0bb1faf68ea",
+    "ingested_at": "2026-09-24T20:03:08.492261"
+  },
+  {
     "url": "https://awesome-android-root.zhoe.org/",
     "title": "Android Root Apps, Modules & Rooting Guides | Awesome Android Root",
     "description": "Browse 650+ Android root apps and modules, practical rooting guides, and troubleshooting help for rooted devices.",
