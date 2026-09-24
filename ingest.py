@@ -173,7 +173,9 @@ def cli(ctx):
 def ingest(url: str, store: str):
     """Ingest a single URL into the knowledge base."""
     store_obj = make_store(store)
-    _process_url(url.strip(), store_obj)
+    success = _process_url(url.strip(), store_obj)
+    if not success:
+        sys.exit(1)
 
 
 @cli.command()
