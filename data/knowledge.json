@@ -18,7 +18,8 @@
     "stars": 18572,
     "android_versions": [],
     "devices": [],
-    "content_hash": "",
+    "blueprint_file": "blueprints/kernelsu.md",
+    "content_hash": "352a03fb7b9e5957a8dc47ca82aac6f2c7ea8728f2f22af4318849084d0bac58",
     "ingested_at": "2026-09-24T02:37:54.407087"
   },
   {
@@ -34,6 +35,7 @@
     "stars": 62911,
     "android_versions": [],
     "devices": [],
+    "blueprint_file": "blueprints/magisk.md",
     "content_hash": "8eae8ed99062bdc93ce9009dcca0900c63a3e558c51579d83b1b54be512fd5ee",
     "ingested_at": "2026-09-24T02:20:23.466664"
   }

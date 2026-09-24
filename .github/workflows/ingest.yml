@@ -76,8 +76,9 @@ jobs:
         run: |
           git config user.name "Knowledge Curator Bot"
           git config user.email "knowledge-curator@github-actions.local"
-          git add data/knowledge.json README.md
+          git add data/knowledge.json README.md blueprints/
           # Only commit if there are staged changes
+
           if git diff --cached --quiet; then
             echo "ℹ️  No changes to commit — all URLs were already in the knowledge base."
           else

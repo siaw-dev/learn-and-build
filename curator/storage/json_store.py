@@ -46,6 +46,12 @@ class JsonStore:
             encoding="utf-8",
         )
 
+    def save(self, entries: list[KnowledgeEntry]) -> None:
+        """Save a list of KnowledgeEntry models directly to JSON."""
+        rows = [self._to_row(e) for e in entries]
+        self._save_raw(rows)
+
+
     def _to_row(self, entry: KnowledgeEntry) -> dict:
         return {
             "url": entry.url,
@@ -60,6 +66,7 @@ class JsonStore:
             "stars": entry.stars,
             "android_versions": entry.android_versions,
             "devices": entry.devices,
+            "blueprint_file": entry.blueprint_file,
             "content_hash": entry.content_hash,
             "ingested_at": entry.ingested_at.isoformat(),
         }
@@ -78,11 +85,13 @@ class JsonStore:
             stars=row.get("stars"),
             android_versions=row.get("android_versions", []),
             devices=row.get("devices", []),
+            blueprint_file=row.get("blueprint_file"),
             content_hash=row.get("content_hash", ""),
             ingested_at=datetime.fromisoformat(
                 row.get("ingested_at", datetime.now().isoformat())
             ),
         )
+
 
     # ── Public API (mirrors Database interface) ──────────────────────────────
 

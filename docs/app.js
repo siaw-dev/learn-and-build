@@ -127,10 +127,16 @@ function renderEntryCard(entry, query = '') {
       <div class="entry-footer">
         <span class="category-badge">📂 ${escHtml(entry.category)}</span>
         ${tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+        ${entry.blueprint_file ? `
+          <button class="btn btn-ghost btn-sm btn-blueprint" style="margin-left:auto;color:var(--green);border-color:rgba(63,185,80,0.4);" data-bp="${escHtml(entry.blueprint_file)}" data-title="${escHtml(entry.title)}">
+            📐 View Blueprint
+          </button>
+        ` : ''}
       </div>
     </article>
   `;
 }
+
 
 function renderEntries(entries, query, category) {
   const grid = document.getElementById('entries-grid');
@@ -420,7 +426,45 @@ function init(cfg) {
   document.getElementById('settings-btn').addEventListener('click', () => {
     showSetupModal(cfg);
   });
+
+  // Blueprint Viewer (delegated)
+  document.getElementById('entries-grid').addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-blueprint');
+    if (!btn) return;
+    const bpPath = btn.dataset.bp;
+    const title = btn.dataset.title || 'Technical Blueprint';
+    const overlay = document.getElementById('blueprint-overlay');
+    const body = document.getElementById('blueprint-body');
+    const titleEl = document.getElementById('blueprint-title');
+    const rawLink = document.getElementById('blueprint-raw-link');
+    const copyBtn = document.getElementById('blueprint-copy');
+
+    titleEl.textContent = `📐 Blueprint: ${title}`;
+    body.innerHTML = '<div class="spinner"></div><p>Loading blueprint...</p>';
+    overlay.classList.remove('hidden');
+
+    const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/${bpPath}`;
+    rawLink.href = `https://github.com/${cfg.owner}/${cfg.repo}/blob/main/${bpPath}`;
+
+    try {
+      const res = await fetch(rawUrl + '?t=' + Date.now());
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const md = await res.text();
+      body.innerHTML = `<pre style="white-space:pre-wrap;font-family:monospace;font-size:0.85rem;line-height:1.5;">${escHtml(md)}</pre>`;
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(md);
+        toast('📋 Blueprint copied to clipboard!', 'success');
+      };
+    } catch (err) {
+      body.innerHTML = `<p style="color:var(--red);">Failed to load blueprint: ${escHtml(err.message)}</p>`;
+    }
+  });
+
+  document.getElementById('blueprint-close').addEventListener('click', () => {
+    document.getElementById('blueprint-overlay').classList.add('hidden');
+  });
 }
+
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 

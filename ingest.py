@@ -30,11 +30,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from curator.config import DB_PATH, JSON_STORE_PATH
+from curator.config import BLUEPRINTS_DIR, DB_PATH, JSON_STORE_PATH
 from curator.ingestors import ingest_github_repo, ingest_youtube_video, ingest_webpage
 from curator.models import KnowledgeEntry
 from curator.output import render_readme
-from curator.processing import classify_entry, summarize_entry
+from curator.processing import classify_entry, extract_blueprint, summarize_entry
 from curator.storage import Database, JsonStore
 
 console = Console()
@@ -130,14 +130,22 @@ def _process_url(url: str, store) -> bool:
         entry = summarize_entry(entry)
     console.print(f"  📝 {entry.description[:120]}")
 
-    # Step 4: Store
+    # Step 4: Extract Deep Blueprint
+    with console.status("  Extracting technical blueprint...", spinner="dots"):
+        bp_path = extract_blueprint(entry, BLUEPRINTS_DIR)
+        if bp_path:
+            entry.blueprint_file = f"blueprints/{bp_path.name}"
+            console.print(f"  📐 Blueprint: [cyan]blueprints/{bp_path.name}[/cyan]")
+
+    # Step 5: Store
     inserted = _store_insert(store, entry)
     if inserted:
-        console.print(f"  [bold green]✅ Saved.[/bold green]")
+        console.print(f"  [bold green]✅ Saved to knowledge base.[/bold green]")
         return True
     else:
         console.print(f"  [yellow]⚠️  Duplicate — already in database. Skipped.[/yellow]")
         return False
+
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -253,6 +261,64 @@ def seed(dry_run: bool, store: str):
         f"{saved}/{len(SEED_URLS)} new entries saved.\n"
         f"Run [cyan]python3 ingest.py render --store {store}[/cyan] to generate the README."
     )
+
+
+@cli.command()
+@click.argument("name", required=False)
+def blueprint(name: str | None):
+    """List all available blueprints or read a specific one."""
+    if not BLUEPRINTS_DIR.exists():
+        console.print("[yellow]No blueprints directory found.[/yellow]")
+        return
+
+    files = sorted(BLUEPRINTS_DIR.glob("*.md"))
+    if not files:
+        console.print("[yellow]No blueprints generated yet.[/yellow]")
+        return
+
+    if not name:
+        console.print(Panel(f"[bold cyan]Available Blueprints ({len(files)}):[/bold cyan]"))
+        for f in files:
+            console.print(f"  📐 [bold]{f.stem}[/bold] -> [dim]{f}[/dim]")
+        console.print("\n[dim]Run: python3 ingest.py blueprint <name> to view.[/dim]")
+        return
+
+    target = BLUEPRINTS_DIR / f"{name}.md"
+    if not target.exists():
+        matches = [f for f in files if name.lower() in f.stem.lower()]
+        if matches:
+            target = matches[0]
+        else:
+            console.print(f"[red]No blueprint found matching '{name}'.[/red]")
+            return
+
+    from rich.markdown import Markdown
+    console.print(Panel(f"[bold green]Blueprint: {target.stem}[/bold green]"))
+    console.print(Markdown(target.read_text(encoding="utf-8")))
+
+
+@cli.command()
+@_STORE_OPTION
+def backfill_blueprints(store: str):
+    """Generate missing blueprints for all existing entries in the database."""
+    store_obj = make_store(store)
+    if isinstance(store_obj, JsonStore):
+        entries = store_obj.get_all()
+    else:
+        entries = asyncio.run(store_obj.get_all())
+
+    console.print(f"[bold]Checking {len(entries)} entries for blueprints...[/bold]")
+    updated = 0
+    for entry in entries:
+        bp_path = extract_blueprint(entry, BLUEPRINTS_DIR)
+        if bp_path:
+            entry.blueprint_file = f"blueprints/{bp_path.name}"
+            updated += 1
+
+    if isinstance(store_obj, JsonStore):
+        store_obj.save(entries)
+    console.print(f"[bold green]✅ Generated/updated {updated} blueprints![/bold green]")
+
 
 
 if __name__ == "__main__":

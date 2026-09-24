@@ -43,8 +43,12 @@
 {% if entry.subcategory %}
 **Type**: {{ entry.subcategory }}
 {% endif %}
+{% if entry.blueprint_file %}
+· [📐 **Technical Blueprint**]({{ entry.blueprint_file }})
+{% endif %}
 
 ---
+
 {% endfor %}
 
 {% endfor %}

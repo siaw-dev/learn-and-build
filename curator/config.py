@@ -29,6 +29,7 @@ if not GEMINI_API_KEYS and GEMINI_API_KEY:
 # ── Paths ───────────────────────────────────────────────────────────────────
 DB_PATH: Path = _ROOT / "data" / "knowledge.db"
 JSON_STORE_PATH: Path = _ROOT / "data" / "knowledge.json"
+BLUEPRINTS_DIR: Path = _ROOT / "blueprints"
 README_PATH: Path = _ROOT / "README.md"
 TEMPLATE_PATH: Path = _ROOT / "templates" / "awesome_readme.md.j2"
 

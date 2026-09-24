@@ -43,6 +43,24 @@
     </div>
   </div>
 
+  <!-- ── Blueprint Viewer Modal ────────────────────────────────────────── -->
+  <div id="blueprint-overlay" class="overlay hidden">
+    <div class="modal blueprint-modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="blueprint-title">📐 Technical Blueprint</h2>
+        <button id="blueprint-close" class="btn btn-ghost btn-sm">✕ Close</button>
+      </div>
+      <div id="blueprint-body" class="blueprint-content">
+        <!-- Rendered markdown or pre -->
+      </div>
+      <div class="modal-actions">
+        <button id="blueprint-copy" class="btn btn-ghost btn-sm">📋 Copy Markdown</button>
+        <a id="blueprint-raw-link" href="#" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Open on GitHub ↗</a>
+      </div>
+    </div>
+  </div>
+
+
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header>
     <div class="header-inner">

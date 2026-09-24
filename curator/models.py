@@ -40,6 +40,7 @@ class KnowledgeEntry(BaseModel):
     stars: Optional[int] = None         # GitHub only
     android_versions: list[str] = []    # e.g. ["Android 13", "Android 14"]
     devices: list[str] = []             # e.g. ["Qualcomm", "Samsung"]
+    blueprint_file: Optional[str] = None # e.g. "blueprints/kernelsu.md"
     raw_content: Optional[str] = None   # Full text (stored in DB, not README)
     content_hash: str = ""              # SHA256 for deduplication
     ingested_at: datetime = datetime.now()
@@ -78,6 +79,7 @@ class KnowledgeEntry(BaseModel):
             "stars": self.stars,
             "android_versions": ",".join(self.android_versions),
             "devices": ",".join(self.devices),
+            "blueprint_file": self.blueprint_file or "",
             "raw_content": self.raw_content or "",
             "content_hash": self.content_hash,
             "ingested_at": self.ingested_at.isoformat(),
@@ -99,9 +101,11 @@ class KnowledgeEntry(BaseModel):
             stars=row.get("stars"),
             android_versions=row.get("android_versions", ""),
             devices=row.get("devices", ""),
+            blueprint_file=row.get("blueprint_file") or None,
             raw_content=row.get("raw_content") or None,
             content_hash=row.get("content_hash", ""),
             ingested_at=datetime.fromisoformat(
                 row.get("ingested_at", datetime.now().isoformat())
             ),
         )
+

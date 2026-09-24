@@ -24,16 +24,20 @@
 
 ![GitHub](https://img.shields.io/badge/-GitHub-181717?logo=github&logoColor=white&style=flat-square)
 **Status**: 🟢 Active · ⭐ 18,572 · 👤 tiann
-**Tags**: `android` `kernel` `kernelsu` `root` `su`
+**Tags**: `android` `kernel` `kernelsu` `root` `su`· [📐 **Technical Blueprint**](blueprints/kernelsu.md)
+
 ---
+
 ### 🔧 [topjohnwu/Magisk](https://github.com/topjohnwu/Magisk)
 
 > The Magic Mask for Android
 
 ![GitHub](https://img.shields.io/badge/-GitHub-181717?logo=github&logoColor=white&style=flat-square)
 **Status**: 🟢 Active · ⭐ 62,911 · 👤 topjohnwu
+· [📐 **Technical Blueprint**](blueprints/magisk.md)
 
 ---
+
 
 
 ---
