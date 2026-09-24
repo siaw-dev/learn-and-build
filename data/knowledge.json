@@ -17,6 +17,23 @@
     "ingested_at": "2026-09-24T04:01:50.499388"
   },
   {
+    "url": "https://awesome-android-root.zhoe.org/rooting-guides/",
+    "title": "Android Rooting Guide | Awesome Android Root",
+    "description": "The ultimate Android rooting guide covering Magisk, KernelSU, APatch installation with device-specific tutorials for Pixel, Samsung, Xiaomi, OnePlus & more.",
+    "source_type": "web",
+    "category": "Root Solutions",
+    "subcategory": null,
+    "tags": [],
+    "status": "active",
+    "author": "Awesome Android Root Project",
+    "stars": null,
+    "android_versions": [],
+    "devices": [],
+    "blueprint_file": "blueprints/android_rooting_guide___awesome_android_root.md",
+    "content_hash": "4aa5adcfc45378711fa8c1b922bf0eb5376781aba0dd651462b464301c11bddd",
+    "ingested_at": "2026-09-24T04:19:37.287994"
+  },
+  {
     "url": "https://github.com/awesome-android-root/awesome-android-root",
     "title": "awesome-android-root/awesome-android-root",
     "description": "Discover best root apps, Magisk, KernelSu & LSPosed(xposed) modules & rooting guides",
