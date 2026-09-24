@@ -10,6 +10,9 @@ Rotation strategy:
   • On 429 (rate limit) or 401/400 API key errors → advance to next key
   • On success → stay on the current key for the rest of the session
   • If all keys are exhausted → raise RuntimeError (triggers heuristic fallback)
+
+API standard: google-genai SDK >= 2.3.0
+Uses client.interactions.create() per gemini-api-dev skill.
 """
 
 from __future__ import annotations
@@ -28,13 +31,8 @@ class GeminiKeyRotator:
 
     Usage:
         rotator = GeminiKeyRotator()
-        client = rotator.get_client()
-        try:
-            result = client.models.generate_content(...)
-        except Exception as e:
-            if rotator.on_error(e):
-                client = rotator.get_client()  # retry with next key
-                result = client.models.generate_content(...)
+        result = rotator.with_retry(fn, *args, **kwargs)
+        # fn must accept a genai.Client as its first argument
     """
 
     # Error substrings that indicate we should try the next key
@@ -43,10 +41,11 @@ class GeminiKeyRotator:
         "quota",
         "rate limit",
         "resource exhausted",
-        "API_KEY_INVALID",
-        "PERMISSION_DENIED",
+        "api_key_invalid",
+        "permission_denied",
         "401",
         "invalid api key",
+        "not_found",  # model not found — likely deprecated model
     )
 
     def __init__(self, keys: Optional[list[str]] = None):
@@ -108,7 +107,7 @@ class GeminiKeyRotator:
             The return value of fn on success.
 
         Raises:
-            RuntimeError: If all keys fail.
+            RuntimeError: If all keys fail with quota/auth errors.
         """
         attempts = 0
         last_error: Optional[Exception] = None

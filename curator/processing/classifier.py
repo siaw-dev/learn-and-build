@@ -2,10 +2,12 @@
 curator/processing/classifier.py
 
 Uses the Gemini API (with automatic key rotation across up to 8 keys)
-to classify a raw KnowledgeEntry into the Android Root/Kernel taxonomy.
+to classify a raw KnowledgeEntry into the domain taxonomy.
 
 Falls back to keyword-based heuristic classification if all API keys
 are exhausted or unavailable.
+
+API: google-genai SDK >= 2.3.0 — uses client.interactions.create()
 """
 
 from __future__ import annotations
@@ -13,17 +15,16 @@ from __future__ import annotations
 import json
 import re
 
-from google.genai import types
-
 from curator.config import ALL_CATEGORIES, GEMINI_API_KEYS, GEMINI_MODEL, TAXONOMY
 from curator.models import EntryStatus, KnowledgeEntry
 from curator.processing.key_rotator import get_rotator
 
 _CLASSIFICATION_PROMPT = """\
-You are an expert in Android internals, rooting, and kernel development.
+You are an expert software engineering analyst.
 
-Given the content below about an Android tool, project, video, or article,
-classify it using ONLY the taxonomy provided.
+Given the content below about a technical tool, project, video, or article,
+classify it using ONLY the taxonomy provided. The resource may be from any
+engineering domain (systems, AI, web, compilers, embedded, databases, etc.).
 
 TAXONOMY (categories and example subcategories):
 {taxonomy}
@@ -44,7 +45,7 @@ Respond with ONLY a valid JSON object (no markdown fences) containing:
 Rules:
 - category MUST be exactly one of the listed category names.
 - tags should be lowercase, specific, and useful for search (3-8 tags).
-- android_versions: list only if explicitly mentioned; otherwise use [].
+- android_versions: list only if explicitly relevant; otherwise use [].
 - devices: list chipset families or manufacturers if relevant; otherwise ["all"].
 - status: use "archived" only if the content explicitly says it's discontinued.
 """
@@ -58,16 +59,13 @@ def _build_taxonomy_text() -> str:
 
 
 def _call_classify(client, prompt: str) -> dict:
-    """Inner function passed to rotator.with_retry()."""
-    response = client.models.generate_content(
+    """Inner function passed to rotator.with_retry(). Uses interactions.create()."""
+    interaction = client.interactions.create(
         model=GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.1,
-            max_output_tokens=512,
-        ),
+        input=prompt,
+        config={"temperature": 0.1, "max_output_tokens": 512},
     )
-    raw = response.text.strip()
+    raw = (interaction.output_text or "").strip()
     raw = re.sub(r"^```[a-z]*\n?", "", raw)
     raw = re.sub(r"\n?```$", "", raw)
     return json.loads(raw)
@@ -116,7 +114,7 @@ def _best_category_match(raw: str) -> str:
     for cat in ALL_CATEGORIES:
         if any(word in raw_lower for word in cat.lower().split()):
             return cat
-    return "Tools & Utilities"
+    return "Tools, CLI & Utilities"
 
 
 def _heuristic_classify(entry: KnowledgeEntry) -> KnowledgeEntry:
@@ -126,14 +124,18 @@ def _heuristic_classify(entry: KnowledgeEntry) -> KnowledgeEntry:
 
     rules = [
         (["magisk", "kernelsu", "apatch", "supersu", "root solution"], "Root Solutions"),
-        (["bootloader", "fastboot", "oem unlock", "edl", "9008"], "Bootloader & Fastboot"),
-        (["kernel", "gki", "kprobes", "lkm"], "Kernel (GKI & Custom)"),
-        (["zygisk", "lsposed", "xposed", "riru", "hook"], "Zygote & Hook Frameworks"),
-        (["module", "overlay", "systemless"], "Modules & Overlays"),
-        (["twrp", "orangefox", "shrp", "recovery"], "Recovery"),
-        (["safetynet", "play integrity", "detection", "bypass"], "Forensics & Anti-Detection"),
-        (["tutorial", "guide", "how to", "learn"], "Tutorials & Learning"),
-        (["samsung", "qualcomm", "mtk", "mediatek", "pixel", "xiaomi"], "Device-Specific"),
+        (["bootloader", "fastboot", "oem unlock", "edl", "9008"], "Bootloaders & Partitions"),
+        (["kernel", "gki", "kprobes", "lkm", "ebpf", "driver"], "Kernel & Low-Level Systems"),
+        (["zygisk", "lsposed", "xposed", "riru", "frida", "hook"], "Runtime Injection & Hooks"),
+        (["module", "overlay", "systemless", "plugin"], "Modules & Extensions"),
+        (["safetynet", "play integrity", "detection", "bypass", "ghidra", "reverse"], "Security & Reverse Engineering"),
+        (["llm", "agent", "ml", "ai", "inference", "vector", "embedding"], "AI, Agents & Machine Learning"),
+        (["compiler", "jit", "bytecode", "ast", "linker", "runtime"], "Compilers & Language Runtimes"),
+        (["database", "storage", "raft", "kafka", "queue", "cache"], "Distributed Systems & Storage"),
+        (["http", "grpc", "websocket", "server", "api", "protocol"], "Web Architecture & Protocols"),
+        (["rtos", "microcontroller", "firmware", "embedded", "spi", "i2c"], "Embedded & Firmware"),
+        (["tutorial", "guide", "how to", "learn", "walkthrough"], "Tutorials & Deep Dives"),
+        (["tool", "cli", "adb", "script", "utility"], "Tools, CLI & Utilities"),
     ]
 
     for keywords, category in rules:
@@ -141,5 +143,5 @@ def _heuristic_classify(entry: KnowledgeEntry) -> KnowledgeEntry:
             entry.category = category
             return entry
 
-    entry.category = "Tools & Utilities"
+    entry.category = "Tools, CLI & Utilities"
     return entry

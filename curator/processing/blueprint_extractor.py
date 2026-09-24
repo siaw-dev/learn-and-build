@@ -24,8 +24,6 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from google.genai import types
-
 from curator.config import GEMINI_API_KEYS, GEMINI_MODEL
 from curator.models import KnowledgeEntry
 from curator.processing.key_rotator import get_rotator
@@ -98,15 +96,13 @@ def _slugify(text: str) -> str:
 
 
 def _call_extract_blueprint(client, prompt: str) -> str:
-    response = client.models.generate_content(
+    """Inner function passed to rotator.with_retry(). Uses interactions.create()."""
+    interaction = client.interactions.create(
         model=GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.2,
-            max_output_tokens=4096,
-        ),
+        input=prompt,
+        config={"temperature": 0.2, "max_output_tokens": 4096},
     )
-    return response.text.strip()
+    return (interaction.output_text or "").strip()
 
 
 def extract_blueprint(

@@ -4,22 +4,22 @@ curator/processing/summarizer.py
 Uses Gemini (with automatic key rotation) to produce a concise 1-2 sentence
 description for each entry. Falls back to the existing description if all
 keys are exhausted or the call fails.
+
+API: google-genai SDK >= 2.3.0 — uses client.interactions.create()
 """
 
 from __future__ import annotations
-
-from google.genai import types
 
 from curator.config import GEMINI_API_KEYS, GEMINI_MODEL
 from curator.models import KnowledgeEntry, SourceType
 from curator.processing.key_rotator import get_rotator
 
 _SUMMARIZE_PROMPT = """\
-You are an expert in Android development, rooting, and kernel engineering.
+You are a skilled technical writer and software engineering analyst.
 
-Write a concise, accurate 1-2 sentence description of the following Android \
-tool/project/resource suitable for an "Awesome List" README.
-Be specific about what it does. Do NOT start with "This is".
+Write a concise, accurate 1-2 sentence description of the following technical
+tool, project, library, article, or video suitable for an engineering knowledge base.
+Be specific about what it does and why it matters. Do NOT start with "This is".
 
 SOURCE TYPE: {source_type}
 TITLE: {title}
@@ -36,16 +36,13 @@ _PLACEHOLDERS = {
 
 
 def _call_summarize(client, prompt: str) -> str:
-    """Inner function passed to rotator.with_retry()."""
-    response = client.models.generate_content(
+    """Inner function passed to rotator.with_retry(). Uses interactions.create()."""
+    interaction = client.interactions.create(
         model=GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.3,
-            max_output_tokens=150,
-        ),
+        input=prompt,
+        config={"temperature": 0.3, "max_output_tokens": 150},
     )
-    return response.text.strip().strip('"\'')
+    return (interaction.output_text or "").strip().strip('"\'')
 
 
 def summarize_entry(entry: KnowledgeEntry) -> KnowledgeEntry:
