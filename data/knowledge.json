@@ -110,5 +110,25 @@
     "blueprint_file": "blueprints/magisk.md",
     "content_hash": "8eae8ed99062bdc93ce9009dcca0900c63a3e558c51579d83b1b54be512fd5ee",
     "ingested_at": "2026-09-24T02:20:23.466664"
+  },
+  {
+    "url": "https://github.com/google/guava",
+    "title": "google/guava",
+    "description": "Google core libraries for Java",
+    "source_type": "github",
+    "category": "Tools, CLI & Utilities",
+    "subcategory": null,
+    "tags": [
+      "guava",
+      "java"
+    ],
+    "status": "active",
+    "author": "google",
+    "stars": 51908,
+    "android_versions": [],
+    "devices": [],
+    "blueprint_file": "blueprints/guava.md",
+    "content_hash": "0d012134d38ad609505d3b366cb58134d0ca6b91b0b2a5a008186a42992ae3e0",
+    "ingested_at": "2026-09-24T04:43:50.620871"
   }
 ]
