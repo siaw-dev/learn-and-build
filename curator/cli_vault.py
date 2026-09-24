@@ -153,5 +153,69 @@ def show_blueprint(slug: str):
             console.print(f"[bold red]❌ Blueprint '{slug}' not found locally or in cloud vault.[/bold red]")
 
 
+@cli.command("note")
+@click.argument("slug")
+@click.argument("note_text")
+@click.option("--tag", "-t", default=None, help="Optional tag, e.g. 'gotcha', 'performance', 'android14'")
+@click.option("--author", "-a", default=None, help="Author or agent name")
+def add_note(slug: str, note_text: str, tag: str | None, author: str | None):
+    """Append a battle-tested field note or production gotcha to a blueprint."""
+    from datetime import datetime, timezone
+    slug_clean = slug.removesuffix(".md").replace("blueprints/", "")
+    candidate = _BLUEPRINTS_DIR / f"{slug_clean}.md"
+
+    if not candidate.exists():
+        found = list(_BLUEPRINTS_DIR.glob(f"*{slug_clean}*.md"))
+        if found:
+            candidate = found[0]
+
+    if not candidate.exists():
+        console.print(f"[bold red]❌ Blueprint '{slug}' not found locally in blueprints/.[/bold red]")
+        sys.exit(1)
+
+    text = candidate.read_text(encoding="utf-8")
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    author_str = f" (by `{author}`)" if author else ""
+    tag_str = f" `[{tag}]`" if tag else ""
+
+    note_entry = f"- **Field Note ({timestamp})**{tag_str}: {note_text}{author_str}"
+
+    header = "### Battle-Tested Field Notes & Production Gotchas"
+    if header not in text:
+        text += f"\n\n{header}\n"
+
+    text += f"{note_entry}\n"
+    candidate.write_text(text, encoding="utf-8")
+    console.print(f"[bold green]✅ Added field note to {candidate.name}:[/bold green]\n  {note_entry}")
+
+
+@cli.command("fact")
+@click.argument("fact_text")
+@click.option("--domain", "-d", default="General", help="Architecture domain or category")
+@click.option("--tags", "-t", default="", help="Comma-separated tags")
+def add_fact(fact_text: str, domain: str, tags: str):
+    """Record an unattached architectural invariant or engineering discovery into data/facts.json."""
+    from datetime import datetime, timezone
+    facts_file = _ROOT / "data" / "facts.json"
+    facts = []
+    if facts_file.exists():
+        try:
+            facts = json.loads(facts_file.read_text(encoding="utf-8"))
+        except Exception:
+            facts = []
+
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    fact_entry = {
+        "fact": fact_text,
+        "domain": domain,
+        "tags": tag_list,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    facts.append(fact_entry)
+    facts_file.parent.mkdir(parents=True, exist_ok=True)
+    facts_file.write_text(json.dumps(facts, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    console.print(f"[bold green]✅ Saved architectural fact to {facts_file.name}![/bold green]")
+
+
 if __name__ == "__main__":
     cli()

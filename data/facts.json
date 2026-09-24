@@ -1,0 +1,11 @@
+[
+  {
+    "fact": "Linux 6.x kernels require raw eBPF program types to specify GPL compatible licenses",
+    "domain": "Kernel & Low-Level Systems",
+    "tags": [
+      "ebpf",
+      "linux6"
+    ],
+    "recorded_at": "2026-09-24T15:18:55.108270"
+  }
+]

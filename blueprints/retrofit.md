@@ -233,3 +233,6 @@ public class MinimalRetrofitDemo {
 - **Hard Prerequisites**: 
   - Minimum Java 8+ runtime environment or Android API 21+.
   - Correct inclusion of OkHttp runtime dependencies (`com.squareup.okhttp3:okhttp`).
+
+### Battle-Tested Field Notes & Production Gotchas
+- **Field Note (2026-09-24) `[proguard]`**: Dynamic proxy invocation requires ProGuard -keepattributes Signature and interface retention (by `antigravity-builder`)
