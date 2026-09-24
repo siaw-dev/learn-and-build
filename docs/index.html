@@ -3,231 +3,269 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🤖 Learn &amp; Build — Android Root &amp; Kernel Intelligence Studio</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+  <title>Learn &amp; Build — Engineering Knowledge Vault &amp; Architectural Blueprints</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='12 2 2 7 12 12 22 7 12 2'/><polyline points='2 17 12 22 22 17'/><polyline points='2 12 12 17 22 12'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ── Setup Modal ───────────────────────────────────────────────────── -->
-  <div id="setup-overlay" class="overlay hidden">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setup-title">
-      <h2 id="setup-title">⚙️ Workspace Settings</h2>
-      <p class="modal-desc">
-        Configure your GitHub repository and Gemini API key. All credentials remain in your browser's <code>localStorage</code>.
-      </p>
-
-      <label for="setup-owner">GitHub Username / Org</label>
-      <input id="setup-owner" type="text" placeholder="siaw-dev" autocomplete="off" />
-
-      <label for="setup-repo">Repository Name</label>
-      <input id="setup-repo" type="text" placeholder="learn-and-build" autocomplete="off" />
-
-      <label for="setup-pat">
-        GitHub PAT (Classic)
-        <span class="hint">
-          <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">Create here</a>
-          — requires <code>repo</code> &amp; <code>workflow</code>
-        </span>
-      </label>
-      <input id="setup-pat" type="password" placeholder="ghp_..." autocomplete="off" />
-
-      <label for="setup-gemini-key">
-        Gemini API Key (For In-Browser Build Studio)
-        <span class="hint">
-          <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noopener">Get free key at Google AI Studio</a>
-        </span>
-      </label>
-      <input id="setup-gemini-key" type="password" placeholder="AIzaSy..." autocomplete="off" />
-
-      <div class="modal-actions">
-        <button id="setup-save" class="btn btn-primary">Save &amp; Connect</button>
-      </div>
-      <p id="setup-error" class="error hidden"></p>
-    </div>
-  </div>
-
-  <!-- ── Blueprint Viewer Modal ────────────────────────────────────────── -->
-  <div id="blueprint-overlay" class="overlay hidden">
-    <div class="modal blueprint-modal" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <h2 id="blueprint-title">📐 Technical Blueprint</h2>
-        <button id="blueprint-close" class="btn btn-ghost btn-sm">✕ Close</button>
-      </div>
-      <div id="blueprint-body" class="blueprint-content">
-        <!-- Rendered markdown -->
-      </div>
-      <div class="modal-actions">
-        <button id="blueprint-copy" class="btn btn-ghost btn-sm">📋 Copy Markdown</button>
-        <button id="blueprint-send-to-studio" class="btn btn-secondary btn-sm">🛠️ Send to Build Studio</button>
-        <a id="blueprint-raw-link" href="#" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Open on GitHub ↗</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Header ────────────────────────────────────────────────────────── -->
-  <header>
-    <div class="header-inner">
-      <div class="header-title">
-        <span class="logo">🤖</span>
-        <div>
-          <h1>Learn &amp; Build</h1>
-          <p class="tagline">Android Root, Kernel &amp; Systems Intelligence Studio</p>
+  <!-- ── Top Application Header ─────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-name">Learn &amp; Build</span>
+          <span class="brand-sub">Architectural Blueprint Vault</span>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="nav-tabs">
-        <button id="tab-vault-btn" class="nav-tab active">
-          📚 Knowledge &amp; Blueprints
-        </button>
-        <button id="tab-studio-btn" class="nav-tab">
-          🛠️ AI Build Studio
-        </button>
-      </nav>
-
-      <div class="header-actions">
-        <span id="entry-count" class="badge">— entries</span>
-        <a id="repo-link" href="https://github.com/siaw-dev/learn-and-build" target="_blank" rel="noopener" class="btn btn-ghost">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-          Repo
+      <div class="repo-badge-container">
+        <a id="repo-link" href="https://github.com/siaw-dev/learn-and-build" target="_blank" rel="noopener" class="repo-badge">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span id="repo-name-label">siaw-dev/learn-and-build</span>
         </a>
-        <button id="settings-btn" class="btn btn-ghost" title="Settings">⚙️</button>
       </div>
+    </div>
+
+    <div class="header-right">
+      <div id="stat-counter" class="stat-pill">
+        <span class="pulse-dot"></span>
+        <span id="total-count-label">Loading vault...</span>
+      </div>
+
+      <button id="toggle-ingest-btn" class="btn btn-primary" title="Ingest new resources via GitHub Actions">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Ingest Sources</span>
+      </button>
+
+      <button id="settings-btn" class="btn btn-secondary icon-btn" title="Repository Settings" aria-label="Settings">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </div>
   </header>
 
-  <!-- ── Main Layout ────────────────────────────────────────────────────── -->
-  <main>
+  <!-- ── Ingestion Drawer / Slide-Down Panel ────────────────────────────── -->
+  <section id="ingest-drawer" class="ingest-drawer hidden" aria-expanded="false">
+    <div class="ingest-container">
+      <div class="ingest-header">
+        <div class="ingest-header-info">
+          <h3>Online Ingestion Pipeline</h3>
+          <p>Paste GitHub repos, YouTube technical lectures, or documentation URLs (one per line). All processing runs online via GitHub Actions with automatic Gemini API key rotation.</p>
+        </div>
+        <button id="close-ingest-drawer" class="icon-btn-ghost" title="Close" aria-label="Close Ingestion Drawer">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
 
-    <!-- VIEW 1: Knowledge & Blueprints Vault -->
-    <div id="vault-view" class="view-panel">
-      <!-- Ingest Panel -->
-      <section id="ingest-section">
-        <div class="panel">
-          <h2>📥 Ingest &amp; Deep-Learn New Sources</h2>
-          <p class="panel-desc">Paste GitHub repos, YouTube videos, or articles. GitHub Actions will extract architecture, hook mechanisms, and code recipes into blueprints.</p>
-
-          <div class="ingest-input-row">
-            <textarea
-              id="url-input"
-              placeholder="https://github.com/bmax121/APatch&#10;https://www.youtube.com/watch?v=...&#10;https://xda-developers.com/how-to-install-kernelsu"
-              rows="3"
-              spellcheck="false"
-            ></textarea>
-            <div class="ingest-controls">
-              <button id="ingest-btn" class="btn btn-primary" disabled>
-                <span class="btn-icon">🚀</span>
-                <span id="ingest-btn-label">Ingest &amp; Extract</span>
-              </button>
-              <button id="clear-btn" class="btn btn-ghost" title="Clear input">✕ Clear</button>
-            </div>
+      <div class="ingest-body">
+        <textarea
+          id="url-input"
+          placeholder="https://github.com/square/retrofit&#10;https://www.youtube.com/watch?v=...&#10;https://github.com/tiann/KernelSU"
+          rows="3"
+          spellcheck="false"
+        ></textarea>
+        <div class="ingest-actions">
+          <div class="ingest-hint">
+            <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Triggers GitHub Actions <code>workflow_dispatch</code>. Results commit automatically to the vault.</span>
           </div>
-
-          <div id="ingest-status" class="status-bar hidden">
-            <span id="status-icon">⏳</span>
-            <span id="status-text">Triggering workflow...</span>
-            <a id="run-link" href="#" target="_blank" rel="noopener" class="run-link hidden">View run →</a>
+          <div class="ingest-btns">
+            <button id="clear-urls-btn" class="btn btn-ghost btn-sm">Clear</button>
+            <button id="submit-ingest-btn" class="btn btn-primary" disabled>
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Dispatch Ingestion Batch</span>
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- Knowledge Base & Blueprints -->
-      <section id="kb-section">
-        <div class="kb-layout">
-
-          <!-- Sidebar Filters -->
-          <aside id="sidebar">
-            <div class="sidebar-header">
-              <span>Filter Category</span>
-              <button id="clear-filter" class="btn-link">Show all</button>
-            </div>
-            <div id="filter-list">
-              <button class="filter-btn active" data-category="all">
-                <span class="filter-label">All</span>
-                <span class="filter-count" id="count-all">0</span>
-              </button>
-            </div>
-          </aside>
-
-          <!-- Entries Pane -->
-          <div id="entries-pane">
-            <div class="entries-toolbar">
-              <input id="search-input" type="search" placeholder="🔍 Search blueprints, tags, hooks, or authors..." />
-              <span id="results-label" class="results-label"></span>
-              <button id="refresh-btn" class="btn btn-ghost btn-sm" title="Refresh from GitHub">↺ Refresh</button>
-            </div>
-
-            <div id="entries-grid">
-              <div class="loading-state">
-                <div class="spinner"></div>
-                <p>Loading knowledge base and blueprints...</p>
-              </div>
-            </div>
-          </div>
-
+      <div id="ingest-status-bar" class="ingest-status-bar hidden">
+        <div class="status-left">
+          <div class="spinner-sm"></div>
+          <span id="ingest-status-text">Dispatching GitHub Actions workflow...</span>
         </div>
-      </section>
-    </div>
-
-    <!-- VIEW 2: AI Build Studio -->
-    <div id="studio-view" class="view-panel hidden">
-      <div class="studio-layout">
-        
-        <!-- Left: Context / Blueprint selector -->
-        <aside class="studio-sidebar">
-          <div class="studio-sidebar-header">
-            <h3>📐 Active Blueprints</h3>
-            <span class="hint">Check blueprints to attach to AI context</span>
-          </div>
-          <div id="blueprint-selector-list" class="blueprint-selector-list">
-            <!-- Populated dynamically -->
-          </div>
-        </aside>
-
-        <!-- Right: Interactive Coding Chat -->
-        <div class="studio-chat-container">
-          <div class="studio-chat-header">
-            <div>
-              <h3>🛠️ AI Code Generator</h3>
-              <p class="hint">Ask the AI to build Android modules, kernel drivers, or bypasses using your learned blueprints.</p>
-            </div>
-            <button id="clear-chat-btn" class="btn btn-ghost btn-sm">🗑️ Clear Chat</button>
-          </div>
-
-          <div id="chat-messages" class="chat-messages">
-            <div class="chat-message assistant">
-              <div class="message-bubble">
-                <p>👋 Welcome to the <strong>Build Studio</strong>! I have access to your learned blueprints (KernelSU, Magisk/Zygisk, and any new sources you ingest).</p>
-                <p>Select which blueprints you want to use on the left, and ask me to generate code, scaffold a module, or explain hook mechanics.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="studio-chat-input-area">
-            <textarea id="studio-prompt-input" rows="3" placeholder="e.g. Using the KernelSU blueprint, write a C program that escalates to root and executes a shell command..."></textarea>
-            <div class="studio-chat-controls">
-              <span id="studio-token-status" class="token-status"></span>
-              <button id="studio-send-btn" class="btn btn-primary">
-                <span>🚀 Generate Code</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
+        <a id="ingest-run-link" href="#" target="_blank" rel="noopener" class="status-link hidden">
+          <span>View GitHub Run</span>
+          <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
       </div>
     </div>
+  </section>
 
-  </main>
+  <!-- ── Main Workspace ────────────────────────────────────────────────── -->
+  <div class="workspace">
+    <!-- Left Navigation Rail & Filters -->
+    <aside class="sidebar">
+      <div class="sidebar-search">
+        <div class="search-input-wrapper">
+          <svg class="search-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input id="search-input" type="search" placeholder="Search blueprints..." autocomplete="off" />
+          <kbd class="search-kbd">/</kbd>
+        </div>
+      </div>
 
-  <!-- ── Footer ────────────────────────────────────────────────────────── -->
-  <footer>
-    <span>Powered by <strong>Learn &amp; Build</strong> · AI-curated · GitHub Actions backend · Gemini Studio</span>
-    <span id="last-updated"></span>
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>SOURCE TYPE</span>
+        </div>
+        <div class="source-pills">
+          <button class="source-pill active" data-source="all">All</button>
+          <button class="source-pill" data-source="github">GitHub</button>
+          <button class="source-pill" data-source="youtube">YouTube</button>
+          <button class="source-pill" data-source="web">Web</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>DOMAINS</span>
+          <button id="reset-category-btn" class="btn-text-link">Reset</button>
+        </div>
+        <nav id="category-nav" class="category-nav">
+          <button class="category-nav-item active" data-category="all">
+            <span class="cat-label">All Domains</span>
+            <span class="cat-count" id="count-all">0</span>
+          </button>
+          <!-- Populated dynamically -->
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Center Knowledge Grid -->
+    <main class="content-canvas">
+      <div class="canvas-toolbar">
+        <div class="canvas-toolbar-left">
+          <h2 id="active-view-title">All Vault Resources</h2>
+          <span id="filtered-count-badge" class="count-badge">0 resources</span>
+        </div>
+        <div class="canvas-toolbar-right">
+          <button id="refresh-vault-btn" class="btn btn-secondary btn-sm" title="Refresh latest data from GitHub">
+            <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            <span>Sync</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Resource Cards Grid -->
+      <div id="cards-container" class="cards-grid">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading architectural blueprints from GitHub...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ── Technical Blueprint Viewer Drawer / Modal ─────────────────────── -->
+  <div id="blueprint-modal" class="modal-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="blueprint-modal-sheet">
+      <header class="blueprint-modal-header">
+        <div class="bp-header-meta">
+          <div class="bp-domain-tag" id="bp-category-badge">Domain</div>
+          <h2 id="bp-modal-title">Architectural Blueprint</h2>
+          <a id="bp-source-url" href="#" target="_blank" rel="noopener" class="bp-source-link">
+            <span id="bp-source-url-text">source</span>
+            <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </div>
+        <div class="bp-header-actions">
+          <button id="bp-copy-btn" class="btn btn-secondary btn-sm" title="Copy raw markdown">
+            <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span id="bp-copy-label">Copy MD</span>
+          </button>
+          <a id="bp-github-raw-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" title="Open raw on GitHub">
+            <svg class="icon-xs" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span>Raw File</span>
+          </a>
+          <button id="bp-close-btn" class="icon-btn-ghost" title="Close" aria-label="Close Blueprint">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="bp-content-body" class="blueprint-markdown-viewer">
+        <!-- Rendered Blueprint Markdown -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Settings Modal ────────────────────────────────────────────────── -->
+  <div id="settings-modal" class="modal-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-dialog">
+      <div class="modal-dialog-header">
+        <h3>Workspace &amp; GitHub Settings</h3>
+        <button id="settings-close-btn" class="icon-btn-ghost" title="Close">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-dialog-body">
+        <p class="modal-explanation">Credentials are stored locally in your browser. A Personal Access Token (classic) with <code>repo</code> &amp; <code>workflow</code> scopes allows the web interface to trigger GitHub Actions.</p>
+        
+        <div class="form-group">
+          <label for="cfg-owner">GitHub Username / Organization</label>
+          <input id="cfg-owner" type="text" placeholder="siaw-dev" autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label for="cfg-repo">Repository Name</label>
+          <input id="cfg-repo" type="text" placeholder="learn-and-build" autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label for="cfg-pat">
+            Personal Access Token (PAT)
+            <span class="field-hint"><a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">Generate on GitHub ↗</a></span>
+          </label>
+          <input id="cfg-pat" type="password" placeholder="ghp_..." autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-dialog-footer">
+        <button id="settings-cancel-btn" class="btn btn-ghost btn-sm">Cancel</button>
+        <button id="settings-save-btn" class="btn btn-primary btn-sm">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Global Toast Notifications ────────────────────────────────────── -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- ── Footer Telemetry / Status ─────────────────────────────────────── -->
+  <footer class="app-footer">
+    <div class="footer-left">
+      <span>Architectural Knowledge Vault · Autonomous Engineering Ingestion</span>
+    </div>
+    <div class="footer-right">
+      <span id="footer-sync-time">Last synchronized: Just now</span>
+    </div>
   </footer>
-
-  <!-- ── Toast Notifications ───────────────────────────────────────────── -->
-  <div id="toast-container" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

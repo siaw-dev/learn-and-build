@@ -1,26 +1,24 @@
 /**
- * app.js — Learn & Build Intelligence Studio
- *
- * Responsibilities:
- * 1. Config management (localStorage: owner, repo, PAT, Gemini Key)
- * 2. Fetch knowledge.json from GitHub raw
- * 3. Render entry cards with search, filters & blueprint viewer
- * 4. Trigger GitHub Actions workflow_dispatch with pasted URLs
- * 5. Tab switching (Knowledge Vault vs AI Build Studio)
- * 6. In-browser AI Build Studio: queries Gemini using attached blueprints as context
+ * Learn & Build — Engineering Knowledge Vault & Blueprint Viewer
+ * Client-Side Application Engine
  */
 
 'use strict';
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// ── Configuration State ───────────────────────────────────────────────────────
+const CONFIG_KEY = 'learn_and_build_cfg';
+const DEFAULT_CONFIG = {
+  owner: 'siaw-dev',
+  repo: 'learn-and-build',
+  pat: '',
+};
 
-const CONFIG_KEY = 'kc_config';
-
-function loadConfig() {
+function getConfig() {
   try {
-    return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    const raw = localStorage.getItem(CONFIG_KEY);
+    return raw ? { ...DEFAULT_CONFIG, ...JSON.parse(raw) } : { ...DEFAULT_CONFIG };
   } catch {
-    return {};
+    return { ...DEFAULT_CONFIG };
   }
 }
 
@@ -28,102 +26,61 @@ function saveConfig(cfg) {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
 }
 
-function isConfigured(cfg) {
-  return cfg.owner && cfg.repo && cfg.pat;
-}
-
-// ── GitHub API helpers ────────────────────────────────────────────────────────
-
-const GH_API = 'https://api.github.com';
-
-async function ghFetch(path, cfg, options = {}) {
-  const res = await fetch(`${GH_API}${path}`, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${cfg.pat}`,
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      ...(options.headers || {}),
-    },
-  });
-  return res;
-}
-
-async function triggerWorkflow(cfg, urls) {
-  const res = await ghFetch(
-    `/repos/${cfg.owner}/${cfg.repo}/actions/workflows/ingest.yml/dispatches`,
-    cfg,
-    {
-      method: 'POST',
-      body: JSON.stringify({ ref: 'main', inputs: { urls } }),
-    }
-  );
-  return res.status === 204;
-}
-
-async function getLatestRun(cfg) {
-  const res = await ghFetch(
-    `/repos/${cfg.owner}/${cfg.repo}/actions/workflows/ingest.yml/runs?per_page=1`,
-    cfg
-  );
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.workflow_runs?.[0] || null;
-}
-
-async function fetchKnowledgeJson(cfg) {
-  const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/data/knowledge.json`;
-  const res = await fetch(url + '?t=' + Date.now());
-  if (!res.ok) return [];
-  return res.json();
-}
-
-// ── Rendering Helpers ─────────────────────────────────────────────────────────
-
-const SOURCE_ICONS = { github: '🔧', youtube: '🎥', web: '📄' };
-const STATUS_LABELS = {
-  active: '🟢 Active', archived: '🔴 Archived',
-  deprecated: '🟡 Deprecated', experimental: '🔵 Experimental',
+// ── Application State ─────────────────────────────────────────────────────────
+const state = {
+  entries: [],
+  selectedCategory: 'all',
+  selectedSource: 'all',
+  searchQuery: '',
+  blueprintCache: new Map(),
+  activeRunPollTimer: null,
 };
 
-function formatStars(n) {
-  if (!n) return null;
-  return n >= 1000 ? `⭐ ${(n / 1000).toFixed(1)}k` : `⭐ ${n}`;
-}
+// ── SVG Vector Icons (No Emojis) ──────────────────────────────────────────────
+const ICONS = {
+  github: `<svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>`,
+  youtube: `<svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
+  web: `<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`,
+  blueprint: `<svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
+  star: `<svg class="icon-xs" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  external: `<svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+};
 
-function highlight(text, query) {
-  if (!query) return escHtml(text);
-  const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  return escHtml(text).replace(re, '<mark>$1</mark>');
-}
-
+// ── Markdown Parser (Self-Contained) ──────────────────────────────────────────
 function escHtml(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function formatMarkdown(text) {
-  // Simple markdown renderer for AI chat messages & blueprints
-  let html = escHtml(text);
+function parseMarkdown(md) {
+  if (!md) return '';
+  let html = escHtml(md);
 
-  // Code blocks: ```lang ... ```
+  // Fenced code blocks with language support
   html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    return `<pre><code class="language-${lang}">${code}</code></pre>`;
+    return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
   });
 
-  // Inline code: `code`
+  // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // Headers: ###, ##, #
-  html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
-  html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+  // Headings
+  html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+  // Blockquotes
+  html = html.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
 
   // Bold & Italic
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
-  // Lists: - item
+  // Unordered Lists
   html = html.replace(/^\- (.*$)/gim, '<li>$1</li>');
+
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
   // Paragraph breaks
   html = html.replace(/\n\n/g, '<p></p>');
@@ -131,37 +88,203 @@ function formatMarkdown(text) {
   return html;
 }
 
-// ── Entry Card Rendering ──────────────────────────────────────────────────────
+// ── Toast Notification System ─────────────────────────────────────────────────
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${escHtml(message)}</span>`;
+  container.appendChild(toast);
 
-function renderEntryCard(entry, query = '') {
-  const icon = SOURCE_ICONS[entry.source_type] || '📄';
-  const stars = formatStars(entry.stars);
-  const status = STATUS_LABELS[entry.status] || entry.status;
-  const tags = (entry.tags || []).slice(0, 6);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(8px)';
+    toast.style.transition = 'all 0.2s ease';
+    setTimeout(() => toast.remove(), 200);
+  }, 3200);
+}
+
+// ── Data Fetching ─────────────────────────────────────────────────────────────
+async function loadKnowledgeVault() {
+  const cfg = getConfig();
+  const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/data/knowledge.json?t=${Date.now()}`;
+  
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.entries = Array.isArray(data) ? data : [];
+    
+    // Update Header Counts
+    document.getElementById('total-count-label').textContent = `${state.entries.length} blueprints`;
+    document.getElementById('count-all').textContent = state.entries.length;
+    document.getElementById('repo-name-label').textContent = `${cfg.owner}/${cfg.repo}`;
+    document.getElementById('repo-link').href = `https://github.com/${cfg.owner}/${cfg.repo}`;
+    
+    const now = new Date();
+    document.getElementById('footer-sync-time').textContent = `Last synchronized: ${now.toLocaleTimeString()}`;
+
+    buildCategorySidebar();
+    renderCards();
+  } catch (err) {
+    console.error('Failed to load vault data:', err);
+    document.getElementById('cards-container').innerHTML = `
+      <div class="empty-state">
+        <p>Could not connect to repository <strong>${escHtml(cfg.owner)}/${escHtml(cfg.repo)}</strong>.</p>
+        <button id="retry-load-btn" class="btn btn-secondary btn-sm">Check Connection &amp; Retry</button>
+      </div>
+    `;
+    document.getElementById('retry-load-btn')?.addEventListener('click', loadKnowledgeVault);
+  }
+}
+
+// ── Sidebar Category Navigation ───────────────────────────────────────────────
+function buildCategorySidebar() {
+  const nav = document.getElementById('category-nav');
+  const counts = {};
+  
+  for (const entry of state.entries) {
+    const cat = entry.category || 'Tools & Utilities';
+    counts[cat] = (counts[cat] || 0) + 1;
+  }
+
+  // Remove existing dynamic items
+  nav.querySelectorAll('.category-nav-item:not([data-category="all"])').forEach(el => el.remove());
+
+  const sortedCats = Object.entries(counts).sort(([, a], [, b]) => b - a);
+  for (const [cat, count] of sortedCats) {
+    const btn = document.createElement('button');
+    btn.className = `category-nav-item ${state.selectedCategory === cat ? 'active' : ''}`;
+    btn.dataset.category = cat;
+    btn.innerHTML = `
+      <span class="cat-label">${escHtml(cat)}</span>
+      <span class="cat-count">${count}</span>
+    `;
+    btn.addEventListener('click', () => {
+      selectCategory(cat);
+    });
+    nav.appendChild(btn);
+  }
+}
+
+function selectCategory(category) {
+  state.selectedCategory = category;
+  document.querySelectorAll('.category-nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.category === category);
+  });
+  renderCards();
+}
+
+// ── Card Grid Rendering ───────────────────────────────────────────────────────
+function renderCards() {
+  const container = document.getElementById('cards-container');
+  const countBadge = document.getElementById('filtered-count-badge');
+  const viewTitle = document.getElementById('active-view-title');
+
+  let filtered = [...state.entries];
+
+  // Category filter
+  if (state.selectedCategory !== 'all') {
+    filtered = filtered.filter(e => e.category === state.selectedCategory);
+    viewTitle.textContent = state.selectedCategory;
+  } else {
+    viewTitle.textContent = 'All Vault Resources';
+  }
+
+  // Source filter
+  if (state.selectedSource !== 'all') {
+    filtered = filtered.filter(e => e.source_type === state.selectedSource);
+  }
+
+  // Search Query filter
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    filtered = filtered.filter(e =>
+      (e.title || '').toLowerCase().includes(q) ||
+      (e.description || '').toLowerCase().includes(q) ||
+      (e.category || '').toLowerCase().includes(q) ||
+      (e.author || '').toLowerCase().includes(q) ||
+      (e.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
+
+  countBadge.textContent = `${filtered.length} of ${state.entries.length} items`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>No resources found matching your current filter.</p>
+        <button id="clear-all-filters-btn" class="btn btn-secondary btn-sm">Reset Filters</button>
+      </div>
+    `;
+    document.getElementById('clear-all-filters-btn')?.addEventListener('click', () => {
+      state.selectedCategory = 'all';
+      state.selectedSource = 'all';
+      state.searchQuery = '';
+      document.getElementById('search-input').value = '';
+      document.querySelectorAll('.source-pill').forEach(p => p.classList.toggle('active', p.dataset.source === 'all'));
+      selectCategory('all');
+    });
+    return;
+  }
+
+  container.innerHTML = filtered.map(entry => createCardHtml(entry)).join('');
+
+  // Attach card event listeners
+  container.querySelectorAll('.btn-blueprint').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const bpFile = btn.dataset.blueprint;
+      const title = btn.dataset.title;
+      const category = btn.dataset.category;
+      const sourceUrl = btn.dataset.url;
+      openBlueprintViewer(bpFile, title, category, sourceUrl);
+    });
+  });
+}
+
+function createCardHtml(entry) {
+  const source = entry.source_type || 'web';
+  const icon = ICONS[source] || ICONS.web;
+  const stars = entry.stars ? `<span class="stars-badge">${ICONS.star} ${(entry.stars >= 1000 ? (entry.stars / 1000).toFixed(1) + 'k' : entry.stars)}</span>` : '';
+  const tags = (entry.tags || []).slice(0, 5);
 
   return `
     <article class="entry-card">
-      <div class="entry-header">
-        <div class="entry-title">
-          <span class="entry-icon">${icon}</span>
-          <a class="entry-name" href="${escHtml(entry.url)}" target="_blank" rel="noopener">
-            ${highlight(entry.title, query)}
-          </a>
-          <span class="source-badge ${escHtml(entry.source_type)}">${escHtml(entry.source_type)}</span>
-        </div>
-        <div class="entry-meta">
-          ${stars ? `<span class="stars">${stars}</span>` : ''}
-          <span class="status-badge ${escHtml(entry.status)}">${status}</span>
-          ${entry.author ? `<span>👤 ${escHtml(entry.author)}</span>` : ''}
+      <div class="card-top">
+        <span class="card-source-badge ${escHtml(source)}">
+          ${icon}
+          <span>${escHtml(source)}</span>
+        </span>
+        <div class="card-meta">
+          ${stars}
+          <span>${escHtml(entry.status || 'active')}</span>
         </div>
       </div>
-      <p class="entry-desc">${highlight(entry.description, query)}</p>
-      <div class="entry-footer">
-        <span class="category-badge">📂 ${escHtml(entry.category)}</span>
-        ${tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+
+      <div class="card-title-group">
+        <h3>
+          <a class="card-title-link" href="${escHtml(entry.url)}" target="_blank" rel="noopener">
+            ${escHtml(entry.title || entry.url)}
+          </a>
+        </h3>
+        <p class="card-desc">${escHtml(entry.description || 'No summary available.')}</p>
+      </div>
+
+      <div class="card-tags">
+        ${tags.map(t => `<span class="card-tag">${escHtml(t)}</span>`).join('')}
+      </div>
+
+      <div class="card-footer">
+        <span class="card-domain-badge">${escHtml(entry.category || 'General')}</span>
         ${entry.blueprint_file ? `
-          <button class="btn btn-ghost btn-sm btn-blueprint" style="margin-left:auto;color:var(--green);border-color:rgba(63,185,80,0.4);" data-bp="${escHtml(entry.blueprint_file)}" data-title="${escHtml(entry.title)}">
-            📐 View Blueprint
+          <button class="btn-blueprint" 
+            data-blueprint="${escHtml(entry.blueprint_file)}"
+            data-title="${escHtml(entry.title || entry.url)}"
+            data-category="${escHtml(entry.category || 'Domain')}"
+            data-url="${escHtml(entry.url)}">
+            ${ICONS.blueprint}
+            <span>Blueprint</span>
           </button>
         ` : ''}
       </div>
@@ -169,512 +292,285 @@ function renderEntryCard(entry, query = '') {
   `;
 }
 
-function renderEntries(entries, query, category) {
-  const grid = document.getElementById('entries-grid');
-  const label = document.getElementById('results-label');
+// ── Blueprint Modal Viewer ────────────────────────────────────────────────────
+let activeBlueprintRaw = '';
 
-  let filtered = entries;
+async function openBlueprintViewer(blueprintFile, title, category, sourceUrl) {
+  const modal = document.getElementById('blueprint-modal');
+  const titleEl = document.getElementById('bp-modal-title');
+  const catBadge = document.getElementById('bp-category-badge');
+  const sourceLink = document.getElementById('bp-source-url');
+  const sourceText = document.getElementById('bp-source-url-text');
+  const rawGithubLink = document.getElementById('bp-github-raw-link');
+  const body = document.getElementById('bp-content-body');
 
-  if (category && category !== 'all') {
-    filtered = filtered.filter(e => e.category === category);
-  }
+  titleEl.textContent = title;
+  catBadge.textContent = category;
+  sourceLink.href = sourceUrl;
+  sourceText.textContent = sourceUrl.replace(/^https?:\/\//, '').split('/')[0] + '/' + (sourceUrl.split('/')[3] || '');
+  
+  const cfg = getConfig();
+  const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/${blueprintFile}`;
+  rawGithubLink.href = rawUrl;
 
-  if (query) {
-    const q = query.toLowerCase();
-    filtered = filtered.filter(e =>
-      (e.title || '').toLowerCase().includes(q) ||
-      (e.description || '').toLowerCase().includes(q) ||
-      (e.tags || []).some(t => t.toLowerCase().includes(q)) ||
-      (e.category || '').toLowerCase().includes(q) ||
-      (e.author || '').toLowerCase().includes(q)
-    );
-  }
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  body.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Fetching technical blueprint from repository...</p>
+    </div>
+  `;
 
-  label.textContent = `${filtered.length} of ${entries.length} entries`;
-
-  if (filtered.length === 0) {
-    grid.innerHTML = `
+  try {
+    let md = state.blueprintCache.get(blueprintFile);
+    if (!md) {
+      const res = await fetch(rawUrl + `?t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      md = await res.text();
+      state.blueprintCache.set(blueprintFile, md);
+    }
+    activeBlueprintRaw = md;
+    body.innerHTML = parseMarkdown(md);
+  } catch (err) {
+    body.innerHTML = `
       <div class="empty-state">
-        <span style="font-size:2rem">🔍</span>
-        <p>No entries match your search.<br>Try ingesting more resources!</p>
+        <p>Could not fetch blueprint file: <code>${escHtml(blueprintFile)}</code></p>
+        <span class="field-hint">${escHtml(err.message)}</span>
       </div>
     `;
+  }
+}
+
+function closeBlueprintViewer() {
+  const modal = document.getElementById('blueprint-modal');
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+  activeBlueprintRaw = '';
+}
+
+// ── Ingestion Dispatch (GitHub Actions) ────────────────────────────────────────
+async function dispatchIngestionWorkflow() {
+  const cfg = getConfig();
+  if (!cfg.pat) {
+    showToast('GitHub PAT required. Configure in Settings.', 'error');
+    openSettingsModal();
     return;
   }
 
-  grid.innerHTML = filtered.map(e => renderEntryCard(e, query)).join('');
-}
+  const input = document.getElementById('url-input');
+  const urls = input.value.trim();
+  if (!urls) return;
 
-function buildFilterSidebar(entries) {
-  const filterList = document.getElementById('filter-list');
-  const categoryCounts = {};
-  for (const e of entries) {
-    categoryCounts[e.category] = (categoryCounts[e.category] || 0) + 1;
-  }
-
-  const sorted = Object.entries(categoryCounts).sort(([, a], [, b]) => b - a);
-  document.getElementById('count-all').textContent = entries.length;
-
-  const existing = filterList.querySelectorAll('.filter-btn[data-category]:not([data-category="all"])');
-  existing.forEach(b => b.remove());
-
-  for (const [cat, count] of sorted) {
-    const btn = document.createElement('button');
-    btn.className = 'filter-btn';
-    btn.dataset.category = cat;
-    btn.innerHTML = `
-      <span class="filter-label">${escHtml(cat)}</span>
-      <span class="filter-count">${count}</span>
-    `;
-    filterList.appendChild(btn);
-  }
-}
-
-// ── Blueprint Cache & Selector ────────────────────────────────────────────────
-
-const _blueprintCache = new Map();
-
-async function fetchBlueprintContent(cfg, path) {
-  if (_blueprintCache.has(path)) return _blueprintCache.get(path);
-  const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/${path}`;
-  const res = await fetch(rawUrl + '?t=' + Date.now());
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  _blueprintCache.set(path, text);
-  return text;
-}
-
-function updateBlueprintSelector(entries) {
-  const list = document.getElementById('blueprint-selector-list');
-  const withBp = entries.filter(e => e.blueprint_file);
-
-  if (withBp.length === 0) {
-    list.innerHTML = '<p class="hint" style="padding:0.5rem;">No blueprints found yet. Ingest repos to generate them.</p>';
-    return;
-  }
-
-  list.innerHTML = withBp.map(e => `
-    <label class="bp-check-item">
-      <input type="checkbox" value="${escHtml(e.blueprint_file)}" checked>
-      <span class="bp-check-label">${escHtml(e.title)}</span>
-    </label>
-  `).join('');
-}
-
-// ── Ingest Workflow ───────────────────────────────────────────────────────────
-
-async function handleIngest(cfg) {
-  const urlInput = document.getElementById('url-input');
-  const statusBar = document.getElementById('ingest-status');
-  const statusIcon = document.getElementById('status-icon');
-  const statusText = document.getElementById('status-text');
-  const runLink = document.getElementById('run-link');
-  const btn = document.getElementById('ingest-btn');
-
-  const raw = urlInput.value.trim();
-  if (!raw) return;
-
-  const urls = raw.split('\n').map(u => u.trim()).filter(Boolean);
-  if (urls.length === 0) return;
+  const btn = document.getElementById('submit-ingest-btn');
+  const statusBar = document.getElementById('ingest-status-bar');
+  const statusText = document.getElementById('ingest-status-text');
+  const runLink = document.getElementById('ingest-run-link');
 
   btn.disabled = true;
-  document.getElementById('ingest-btn-label').textContent = 'Triggering...';
-  statusBar.className = 'status-bar';
   statusBar.classList.remove('hidden');
-  statusIcon.textContent = '⏳';
-  statusText.textContent = `Triggering GitHub Actions for ${urls.length} URL(s)...`;
   runLink.classList.add('hidden');
+  statusText.textContent = 'Triggering workflow_dispatch in GitHub Actions...';
 
   try {
-    const ok = await triggerWorkflow(cfg, urls.join('\n'));
-    if (!ok) throw new Error('workflow_dispatch failed');
-
-    statusIcon.textContent = '🚀';
-    statusText.textContent = `GitHub Actions running for ${urls.length} URL(s). Blueprints & knowledge base are updating...`;
-
-    setTimeout(async () => {
-      const run = await getLatestRun(cfg);
-      if (run) {
-        runLink.href = run.html_url;
-        runLink.textContent = 'View live extraction run →';
-        runLink.classList.remove('hidden');
-      }
-    }, 3000);
-
-    toast(`🚀 Ingesting & extracting blueprints in GitHub Actions!`, 'success');
-    urlInput.value = '';
-
-    setTimeout(() => {
-      toast('🔄 Refreshing knowledge base...', 'success');
-      loadAndRender(cfg);
-    }, 75_000);
-
-  } catch (e) {
-    statusBar.className = 'status-bar error';
-    statusIcon.textContent = '❌';
-    statusText.textContent = `Failed: ${e.message}. Ensure PAT has "repo" and "workflow" scopes.`;
-    toast('❌ Failed to trigger extraction', 'error');
-  } finally {
-    btn.disabled = false;
-    document.getElementById('ingest-btn-label').textContent = 'Ingest & Extract';
-  }
-}
-
-// ── In-Browser AI Build Studio ────────────────────────────────────────────────
-
-async function handleStudioSend(cfg) {
-  const input = document.getElementById('studio-prompt-input');
-  const prompt = input.value.trim();
-  if (!prompt) return;
-
-  const geminiKey = cfg.geminiKey;
-  if (!geminiKey) {
-    toast('⚠️ Please add your Gemini API Key in Settings (⚙️) to use the Build Studio', 'error');
-    showSetupModal(cfg);
-    return;
-  }
-
-  const messagesContainer = document.getElementById('chat-messages');
-  const sendBtn = document.getElementById('studio-send-btn');
-  const statusEl = document.getElementById('studio-token-status');
-
-  // Append user message
-  messagesContainer.innerHTML += `
-    <div class="chat-message user">
-      <div class="message-bubble">${escHtml(prompt)}</div>
-    </div>
-  `;
-  input.value = '';
-  sendBtn.disabled = true;
-  statusEl.textContent = 'Gathering blueprints & querying Gemini...';
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-  // Placeholder assistant message
-  const assistantId = 'msg-' + Date.now();
-  messagesContainer.innerHTML += `
-    <div class="chat-message assistant" id="${assistantId}">
-      <div class="message-bubble">
-        <div class="spinner"></div>
-        <span style="font-size:0.85rem;color:var(--text-dim);margin-left:0.5rem;">Synthesizing blueprints &amp; generating code...</span>
-      </div>
-    </div>
-  `;
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-  try {
-    // 1. Gather checked blueprints
-    const checkedBps = Array.from(document.querySelectorAll('#blueprint-selector-list input[type="checkbox"]:checked'))
-      .map(cb => cb.value);
-
-    let blueprintsContext = '';
-    for (const bpPath of checkedBps) {
-      try {
-        const content = await fetchBlueprintContent(cfg, bpPath);
-        blueprintsContext += `\n\n--- BLUEPRINT: ${bpPath} ---\n${content}`;
-      } catch (err) {
-        console.warn('Could not load blueprint:', bpPath, err);
-      }
-    }
-
-    // 2. Call Gemini API
-    const systemPrompt = `You are an expert Principal Android Systems & Kernel Engineer.
-You specialize in KernelSU, Magisk/Zygisk, APatch, Linux kernel drivers, Android init, and sepolicy.
-The user wants you to generate code, scaffold modules, or explain technical mechanics.
-
-Use the following VERIFIED TECHNICAL BLUEPRINTS as your primary ground truth and architectural reference:
-${blueprintsContext || 'No specific blueprints attached.'}
-
-Rules:
-- Provide COMPLETE, production-ready, compilable code.
-- Never use placeholder comments like "// implement here".
-- Cite the exact mechanism or blueprint you based your design on.`;
-
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
-
-
-    const payload = {
-      contents: [
-        { role: 'user', parts: [{ text: `${systemPrompt}\n\nUSER REQUEST: ${prompt}` }] }
-      ],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 3000,
-      }
-    };
-
-    const res = await fetch(apiUrl, {
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/actions/workflows/ingest.yml/dispatches`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: {
+        'Authorization': `Bearer ${cfg.pat}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({ ref: 'main', inputs: { urls } }),
     });
 
-    if (!res.ok) {
+    if (res.status === 204) {
+      showToast('Workflow successfully dispatched!', 'success');
+      input.value = '';
+      pollLatestRun(cfg);
+    } else {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `API error ${res.status}`);
+      throw new Error(errData.message || `HTTP ${res.status}`);
     }
-
-    const data = await res.json();
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
-
-    const assistantMsg = document.getElementById(assistantId);
-    assistantMsg.querySelector('.message-bubble').innerHTML = formatMarkdown(replyText);
-
-    statusEl.textContent = '✅ Code generated successfully.';
   } catch (err) {
-    const assistantMsg = document.getElementById(assistantId);
-    assistantMsg.querySelector('.message-bubble').innerHTML = `
-      <p style="color:var(--red);">⚠️ Generation failed: ${escHtml(err.message)}</p>
-      <p style="font-size:0.8rem;color:var(--text-dim);">Verify your Gemini API key in Settings (⚙️).</p>
-    `;
-    statusEl.textContent = '❌ Generation error.';
-  } finally {
-    sendBtn.disabled = false;
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    statusBar.classList.remove('hidden');
+    statusText.textContent = `Dispatch failed: ${err.message}`;
+    btn.disabled = false;
+    showToast(`Ingestion error: ${err.message}`, 'error');
   }
 }
 
-// ── Setup Modal ───────────────────────────────────────────────────────────────
+async function pollLatestRun(cfg) {
+  const statusText = document.getElementById('ingest-status-text');
+  const runLink = document.getElementById('ingest-run-link');
+  const btn = document.getElementById('submit-ingest-btn');
 
-function showSetupModal(prefill = {}) {
-  const overlay = document.getElementById('setup-overlay');
-  overlay.classList.remove('hidden');
+  let attempts = 0;
+  clearInterval(state.activeRunPollTimer);
 
-  if (prefill.owner) document.getElementById('setup-owner').value = prefill.owner;
-  if (prefill.repo)  document.getElementById('setup-repo').value  = prefill.repo;
-  if (prefill.geminiKey) document.getElementById('setup-gemini-key').value = prefill.geminiKey;
-
-  document.getElementById('setup-save').onclick = async () => {
-    const owner = document.getElementById('setup-owner').value.trim();
-    const repo  = document.getElementById('setup-repo').value.trim();
-    const pat   = document.getElementById('setup-pat').value.trim();
-    const geminiKey = document.getElementById('setup-gemini-key').value.trim();
-    const err   = document.getElementById('setup-error');
-
-    if (!owner || !repo || !pat) {
-      err.textContent = 'GitHub Username, Repo, and PAT are required.';
-      err.classList.remove('hidden');
-      return;
-    }
-
-    err.classList.add('hidden');
-    document.getElementById('setup-save').textContent = 'Validating...';
-    document.getElementById('setup-save').disabled = true;
-
-    const cfg = { owner, repo, pat, geminiKey };
+  state.activeRunPollTimer = setInterval(async () => {
+    attempts++;
     try {
-      const res = await ghFetch(`/repos/${owner}/${repo}`, cfg);
-      if (res.status === 401 || res.status === 403) throw new Error('Invalid token or no access');
-      if (res.status === 404) throw new Error('Repository not found');
-      if (!res.ok) throw new Error(`GitHub error ${res.status}`);
+      const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/actions/workflows/ingest.yml/runs?per_page=1`, {
+        headers: {
+          'Authorization': `Bearer ${cfg.pat}`,
+          'Accept': 'application/vnd.github+json',
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const latest = data.workflow_runs?.[0];
+        if (latest) {
+          runLink.href = latest.html_url;
+          runLink.classList.remove('hidden');
+          statusText.textContent = `Action status: ${latest.status} (${latest.conclusion || 'running'})`;
 
-      saveConfig(cfg);
-      overlay.classList.add('hidden');
-      toast('✅ Connected to repository!', 'success');
-      init(cfg);
+          if (latest.status === 'completed') {
+            clearInterval(state.activeRunPollTimer);
+            btn.disabled = false;
+            showToast(`Ingestion run finished with: ${latest.conclusion}`, latest.conclusion === 'success' ? 'success' : 'error');
+            setTimeout(loadKnowledgeVault, 2000);
+          }
+        }
+      }
     } catch (e) {
-      err.textContent = e.message;
-      err.classList.remove('hidden');
-    } finally {
-      document.getElementById('setup-save').textContent = 'Save & Connect';
-      document.getElementById('setup-save').disabled = false;
+      console.warn('Error polling run:', e);
     }
-  };
-}
 
-// ── Load & Render ─────────────────────────────────────────────────────────────
-
-let _allEntries = [];
-let _activeCategory = 'all';
-let _searchQuery = '';
-
-async function loadAndRender(cfg) {
-  const grid = document.getElementById('entries-grid');
-  grid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading knowledge base and blueprints...</p></div>';
-
-  try {
-    _allEntries = await fetchKnowledgeJson(cfg);
-
-    document.getElementById('entry-count').textContent =
-      `${_allEntries.length} entr${_allEntries.length !== 1 ? 'ies' : 'y'}`;
-
-    buildFilterSidebar(_allEntries);
-    renderEntries(_allEntries, _searchQuery, _activeCategory);
-    updateBlueprintSelector(_allEntries);
-
-    if (_allEntries.length > 0) {
-      const last = _allEntries.reduce((a, b) =>
-        a.ingested_at > b.ingested_at ? a : b
-      );
-      document.getElementById('last-updated').textContent =
-        `Last entry: ${new Date(last.ingested_at).toLocaleDateString()}`;
+    if (attempts > 60) {
+      clearInterval(state.activeRunPollTimer);
+      btn.disabled = false;
     }
-  } catch (e) {
-    grid.innerHTML = `
-      <div class="error-state">
-        <span style="font-size:2rem">⚠️</span>
-        <p>Could not load knowledge base.<br>
-        Make sure <code>data/knowledge.json</code> exists in your repo.</p>
-        <p style="font-size:0.75rem;color:var(--text-dim)">${escHtml(e.message)}</p>
-      </div>
-    `;
-  }
+  }, 4000);
 }
 
-function toast(msg, type = '') {
-  const container = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  container.appendChild(el);
-  setTimeout(() => el.remove(), 4000);
+// ── Settings Modal ────────────────────────────────────────────────────────────
+function openSettingsModal() {
+  const cfg = getConfig();
+  document.getElementById('cfg-owner').value = cfg.owner || '';
+  document.getElementById('cfg-repo').value = cfg.repo || '';
+  document.getElementById('cfg-pat').value = cfg.pat || '';
+  const modal = document.getElementById('settings-modal');
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
 }
 
-// ── Init & Tab Switching ──────────────────────────────────────────────────────
+function closeSettingsModal() {
+  const modal = document.getElementById('settings-modal');
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
 
-function init(cfg) {
-  loadAndRender(cfg);
+function saveSettings() {
+  const owner = document.getElementById('cfg-owner').value.trim() || 'siaw-dev';
+  const repo = document.getElementById('cfg-repo').value.trim() || 'learn-and-build';
+  const pat = document.getElementById('cfg-pat').value.trim();
 
-  // Tab switching
-  const tabVaultBtn = document.getElementById('tab-vault-btn');
-  const tabStudioBtn = document.getElementById('tab-studio-btn');
-  const vaultView = document.getElementById('vault-view');
-  const studioView = document.getElementById('studio-view');
+  saveConfig({ owner, repo, pat });
+  closeSettingsModal();
+  showToast('Settings saved successfully.', 'success');
+  loadKnowledgeVault();
+}
 
-  tabVaultBtn.addEventListener('click', () => {
-    tabVaultBtn.classList.add('active');
-    tabStudioBtn.classList.remove('active');
-    vaultView.classList.remove('hidden');
-    studioView.classList.add('hidden');
-  });
+// ── Application Initialization & Listeners ────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Load Initial Data
+  loadKnowledgeVault();
 
-  tabStudioBtn.addEventListener('click', () => {
-    tabStudioBtn.classList.add('active');
-    tabVaultBtn.classList.remove('active');
-    studioView.classList.remove('hidden');
-    vaultView.classList.add('hidden');
-  });
-
-  // Search
+  // Search input reactive
   const searchInput = document.getElementById('search-input');
-  searchInput.addEventListener('input', () => {
-    _searchQuery = searchInput.value.trim();
-    renderEntries(_allEntries, _searchQuery, _activeCategory);
+  searchInput.addEventListener('input', (e) => {
+    state.searchQuery = e.target.value.trim();
+    renderCards();
   });
 
-  // Filter clicks
-  document.getElementById('filter-list').addEventListener('click', e => {
-    const btn = e.target.closest('.filter-btn');
-    if (!btn) return;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    _activeCategory = btn.dataset.category;
-    renderEntries(_allEntries, _searchQuery, _activeCategory);
-  });
-
-  document.getElementById('clear-filter').addEventListener('click', () => {
-    _activeCategory = 'all';
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('.filter-btn[data-category="all"]').classList.add('active');
-    renderEntries(_allEntries, _searchQuery, _activeCategory);
-  });
-
-  // Ingest inputs
-  const urlInput = document.getElementById('url-input');
-  const ingestBtn = document.getElementById('ingest-btn');
-  const ingestLabel = document.getElementById('ingest-btn-label');
-
-  urlInput.addEventListener('input', () => {
-    const count = urlInput.value.trim().split('\n').filter(l => l.trim()).length;
-    ingestBtn.disabled = count === 0;
-    ingestLabel.textContent = count > 1 ? `Ingest ${count} URLs` : 'Ingest & Extract';
-  });
-
-  ingestBtn.addEventListener('click', () => handleIngest(cfg));
-
-  document.getElementById('clear-btn').addEventListener('click', () => {
-    urlInput.value = '';
-    ingestBtn.disabled = true;
-    ingestLabel.textContent = 'Ingest & Extract';
-  });
-
-  document.getElementById('refresh-btn').addEventListener('click', () => {
-    toast('🔄 Refreshing...', '');
-    loadAndRender(cfg);
-  });
-
-  document.getElementById('settings-btn').addEventListener('click', () => {
-    showSetupModal(cfg);
-  });
-
-  // Blueprint Viewer modal
-  document.getElementById('entries-grid').addEventListener('click', async e => {
-    const btn = e.target.closest('.btn-blueprint');
-    if (!btn) return;
-    const bpPath = btn.dataset.bp;
-    const title = btn.dataset.title || 'Technical Blueprint';
-    const overlay = document.getElementById('blueprint-overlay');
-    const body = document.getElementById('blueprint-body');
-    const titleEl = document.getElementById('blueprint-title');
-    const rawLink = document.getElementById('blueprint-raw-link');
-    const copyBtn = document.getElementById('blueprint-copy');
-    const sendToStudioBtn = document.getElementById('blueprint-send-to-studio');
-
-    titleEl.textContent = `📐 Blueprint: ${title}`;
-    body.innerHTML = '<div class="spinner"></div><p>Loading blueprint...</p>';
-    overlay.classList.remove('hidden');
-
-    rawLink.href = `https://github.com/${cfg.owner}/${cfg.repo}/blob/main/${bpPath}`;
-
-    try {
-      const md = await fetchBlueprintContent(cfg, bpPath);
-      body.innerHTML = `<div style="line-height:1.6;">${formatMarkdown(md)}</div>`;
-      copyBtn.onclick = () => {
-        navigator.clipboard.writeText(md);
-        toast('📋 Blueprint copied to clipboard!', 'success');
-      };
-      sendToStudioBtn.onclick = () => {
-        overlay.classList.add('hidden');
-        tabStudioBtn.click();
-        const input = document.getElementById('studio-prompt-input');
-        input.value = `Using what is defined in the ${title} blueprint, `;
-        input.focus();
-      };
-    } catch (err) {
-      body.innerHTML = `<p style="color:var(--red);">Failed to load blueprint: ${escHtml(err.message)}</p>`;
-    }
-  });
-
-  document.getElementById('blueprint-close').addEventListener('click', () => {
-    document.getElementById('blueprint-overlay').classList.add('hidden');
-  });
-
-  // Studio Chat
-  document.getElementById('studio-send-btn').addEventListener('click', () => handleStudioSend(cfg));
-  document.getElementById('studio-prompt-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+  // Keyboard shortcut '/' to search
+  window.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== searchInput && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
-      handleStudioSend(cfg);
+      searchInput.focus();
+    } else if (e.key === 'Escape') {
+      closeBlueprintViewer();
+      closeSettingsModal();
+      document.getElementById('ingest-drawer').classList.add('hidden');
     }
   });
 
-  document.getElementById('clear-chat-btn').addEventListener('click', () => {
-    document.getElementById('chat-messages').innerHTML = `
-      <div class="chat-message assistant">
-        <div class="message-bubble">
-          <p>Chat cleared. Select blueprints on the left and ask a question to begin building.</p>
-        </div>
-      </div>
-    `;
+  // Source Pills Filtering
+  document.querySelectorAll('.source-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.source-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.selectedSource = pill.dataset.source;
+      renderCards();
+    });
   });
-}
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
+  // Reset category button
+  document.getElementById('reset-category-btn').addEventListener('click', () => {
+    selectCategory('all');
+  });
 
-(function bootstrap() {
-  const cfg = loadConfig();
-  if (!isConfigured(cfg)) {
-    showSetupModal({ owner: 'siaw-dev', repo: 'learn-and-build' });
-  } else {
-    init(cfg);
-  }
-})();
+  // Refresh Vault button
+  document.getElementById('refresh-vault-btn').addEventListener('click', () => {
+    showToast('Syncing vault with GitHub...', 'info');
+    loadKnowledgeVault();
+  });
+
+  // Ingestion Drawer Toggle
+  const toggleIngestBtn = document.getElementById('toggle-ingest-btn');
+  const ingestDrawer = document.getElementById('ingest-drawer');
+  toggleIngestBtn.addEventListener('click', () => {
+    const isHidden = ingestDrawer.classList.toggle('hidden');
+    toggleIngestBtn.classList.toggle('active', !isHidden);
+    if (!isHidden) {
+      document.getElementById('url-input').focus();
+    }
+  });
+
+  document.getElementById('close-ingest-drawer').addEventListener('click', () => {
+    ingestDrawer.classList.add('hidden');
+    toggleIngestBtn.classList.remove('active');
+  });
+
+  // URL input change validation
+  const urlInput = document.getElementById('url-input');
+  const submitIngestBtn = document.getElementById('submit-ingest-btn');
+  urlInput.addEventListener('input', () => {
+    submitIngestBtn.disabled = !urlInput.value.trim();
+  });
+
+  document.getElementById('clear-urls-btn').addEventListener('click', () => {
+    urlInput.value = '';
+    submitIngestBtn.disabled = true;
+  });
+
+  submitIngestBtn.addEventListener('click', dispatchIngestionWorkflow);
+
+  // Blueprint Modal Actions
+  document.getElementById('bp-close-btn').addEventListener('click', closeBlueprintViewer);
+  document.getElementById('blueprint-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'blueprint-modal') closeBlueprintViewer();
+  });
+
+  document.getElementById('bp-copy-btn').addEventListener('click', async () => {
+    if (!activeBlueprintRaw) return;
+    try {
+      await navigator.clipboard.writeText(activeBlueprintRaw);
+      const label = document.getElementById('bp-copy-label');
+      label.textContent = 'Copied!';
+      showToast('Blueprint markdown copied to clipboard!', 'success');
+      setTimeout(() => { label.textContent = 'Copy MD'; }, 2000);
+    } catch {
+      showToast('Failed to copy to clipboard', 'error');
+    }
+  });
+
+  // Settings Modal Actions
+  document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
+  document.getElementById('settings-close-btn').addEventListener('click', closeSettingsModal);
+  document.getElementById('settings-cancel-btn').addEventListener('click', closeSettingsModal);
+  document.getElementById('settings-save-btn').addEventListener('click', saveSettings);
+  document.getElementById('settings-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'settings-modal') closeSettingsModal();
+  });
+});

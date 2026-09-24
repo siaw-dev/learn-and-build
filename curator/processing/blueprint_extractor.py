@@ -100,7 +100,7 @@ def _call_extract_blueprint(client, prompt: str) -> str:
     interaction = client.interactions.create(
         model=GEMINI_MODEL,
         input=prompt,
-        generation_config={"temperature": 0.2, "max_output_tokens": 4096},
+        generation_config={"temperature": 0.2, "max_output_tokens": 3000},
     )
     return (interaction.output_text or "").strip()
 

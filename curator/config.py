@@ -34,7 +34,8 @@ README_PATH: Path = _ROOT / "README.md"
 TEMPLATE_PATH: Path = _ROOT / "templates" / "awesome_readme.md.j2"
 
 # ── Models ──────────────────────────────────────────────────────────────────
-GEMINI_MODEL: str = "gemini-3.8-flash"
+# Use gemini-3.5-flash-lite: high throughput, standard quota limits, and zero 503 spikes
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 
 

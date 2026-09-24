@@ -46,6 +46,10 @@ class GeminiKeyRotator:
         "401",
         "invalid api key",
         "not_found",  # model not found — likely deprecated model
+        "503",
+        "unavailable",
+        "high demand",
+        "service_unavailable",
     )
 
     def __init__(self, keys: Optional[list[str]] = None):
