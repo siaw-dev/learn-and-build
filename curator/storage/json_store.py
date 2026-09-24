@@ -106,13 +106,21 @@ class JsonStore:
         Checks both URL and content_hash for deduplication.
         """
         rows = self._load_raw()
-        existing_urls = {r["url"] for r in rows}
-        existing_hashes = {r.get("content_hash", "") for r in rows}
+        existing_urls = {r["url"].rstrip("/").lower() for r in rows if r.get("url")}
+        existing_hashes = {r.get("content_hash") for r in rows if r.get("content_hash")}
 
-        if entry.url in existing_urls or entry.content_hash in existing_hashes:
+        clean_url = entry.url.rstrip("/").lower()
+        if clean_url in existing_urls:
             return False
 
+        if entry.content_hash and entry.content_hash in existing_hashes:
+            return False
+
+        if not entry.content_hash:
+            entry.content_hash = hashlib.sha256(clean_url.encode()).hexdigest()
+
         rows.append(self._to_row(entry))
+
         self._save_raw(rows)
         return True
 

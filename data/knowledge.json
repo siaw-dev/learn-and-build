@@ -1,5 +1,22 @@
 [
   {
+    "url": "https://awesome-android-root.zhoe.org/",
+    "title": "Android Root Apps, Modules & Rooting Guides | Awesome Android Root",
+    "description": "Browse 650+ Android root apps and modules, practical rooting guides, and troubleshooting help for rooted devices.",
+    "source_type": "web",
+    "category": "Modules & Overlays",
+    "subcategory": null,
+    "tags": [],
+    "status": "active",
+    "author": null,
+    "stars": null,
+    "android_versions": [],
+    "devices": [],
+    "blueprint_file": "blueprints/android_root_apps__modules___rooting_guides___awesome_android_root.md",
+    "content_hash": "f70f1bb52b383c8c21c47b151f1f78e9abb9919afa8b98155c725db3871a248d",
+    "ingested_at": "2026-09-24T04:01:50.499388"
+  },
+  {
     "url": "https://github.com/tiann/KernelSU",
     "title": "tiann/KernelSU",
     "description": "A Kernel based root solution for Android",

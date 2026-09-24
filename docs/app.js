@@ -1,13 +1,13 @@
 /**
- * app.js — Knowledge Curator Dashboard
+ * app.js — Learn & Build Intelligence Studio
  *
  * Responsibilities:
- * 1. Config management (localStorage: owner, repo, PAT)
- * 2. Fetch knowledge.json from the GitHub raw URL
- * 3. Render entry cards with search + category filtering
+ * 1. Config management (localStorage: owner, repo, PAT, Gemini Key)
+ * 2. Fetch knowledge.json from GitHub raw
+ * 3. Render entry cards with search, filters & blueprint viewer
  * 4. Trigger GitHub Actions workflow_dispatch with pasted URLs
- * 5. Poll for workflow run status and link
- * 6. Toast notifications
+ * 5. Tab switching (Knowledge Vault vs AI Build Studio)
+ * 6. In-browser AI Build Studio: queries Gemini using attached blueprints as context
  */
 
 'use strict';
@@ -58,7 +58,7 @@ async function triggerWorkflow(cfg, urls) {
       body: JSON.stringify({ ref: 'main', inputs: { urls } }),
     }
   );
-  return res.status === 204; // 204 No Content = success
+  return res.status === 204;
 }
 
 async function getLatestRun(cfg) {
@@ -73,12 +73,12 @@ async function getLatestRun(cfg) {
 
 async function fetchKnowledgeJson(cfg) {
   const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/data/knowledge.json`;
-  const res = await fetch(url + '?t=' + Date.now()); // cache-bust
+  const res = await fetch(url + '?t=' + Date.now());
   if (!res.ok) return [];
   return res.json();
 }
 
-// ── Rendering ─────────────────────────────────────────────────────────────────
+// ── Rendering Helpers ─────────────────────────────────────────────────────────
 
 const SOURCE_ICONS = { github: '🔧', youtube: '🎥', web: '📄' };
 const STATUS_LABELS = {
@@ -100,6 +100,38 @@ function highlight(text, query) {
 function escHtml(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+function formatMarkdown(text) {
+  // Simple markdown renderer for AI chat messages & blueprints
+  let html = escHtml(text);
+
+  // Code blocks: ```lang ... ```
+  html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    return `<pre><code class="language-${lang}">${code}</code></pre>`;
+  });
+
+  // Inline code: `code`
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Headers: ###, ##, #
+  html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+  html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+  html = html.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+
+  // Bold & Italic
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  // Lists: - item
+  html = html.replace(/^\- (.*$)/gim, '<li>$1</li>');
+
+  // Paragraph breaks
+  html = html.replace(/\n\n/g, '<p></p>');
+
+  return html;
+}
+
+// ── Entry Card Rendering ──────────────────────────────────────────────────────
 
 function renderEntryCard(entry, query = '') {
   const icon = SOURCE_ICONS[entry.source_type] || '📄';
@@ -136,7 +168,6 @@ function renderEntryCard(entry, query = '') {
     </article>
   `;
 }
-
 
 function renderEntries(entries, query, category) {
   const grid = document.getElementById('entries-grid');
@@ -182,10 +213,8 @@ function buildFilterSidebar(entries) {
   }
 
   const sorted = Object.entries(categoryCounts).sort(([, a], [, b]) => b - a);
-
   document.getElementById('count-all').textContent = entries.length;
 
-  // Remove old category buttons (keep "All")
   const existing = filterList.querySelectorAll('.filter-btn[data-category]:not([data-category="all"])');
   existing.forEach(b => b.remove());
 
@@ -201,50 +230,35 @@ function buildFilterSidebar(entries) {
   }
 }
 
-// ── Setup Modal ───────────────────────────────────────────────────────────────
+// ── Blueprint Cache & Selector ────────────────────────────────────────────────
 
-function showSetupModal(prefill = {}) {
-  const overlay = document.getElementById('setup-overlay');
-  overlay.classList.remove('hidden');
+const _blueprintCache = new Map();
 
-  if (prefill.owner) document.getElementById('setup-owner').value = prefill.owner;
-  if (prefill.repo)  document.getElementById('setup-repo').value  = prefill.repo;
+async function fetchBlueprintContent(cfg, path) {
+  if (_blueprintCache.has(path)) return _blueprintCache.get(path);
+  const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/${path}`;
+  const res = await fetch(rawUrl + '?t=' + Date.now());
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  _blueprintCache.set(path, text);
+  return text;
+}
 
-  document.getElementById('setup-save').onclick = async () => {
-    const owner = document.getElementById('setup-owner').value.trim();
-    const repo  = document.getElementById('setup-repo').value.trim();
-    const pat   = document.getElementById('setup-pat').value.trim();
-    const err   = document.getElementById('setup-error');
+function updateBlueprintSelector(entries) {
+  const list = document.getElementById('blueprint-selector-list');
+  const withBp = entries.filter(e => e.blueprint_file);
 
-    if (!owner || !repo || !pat) {
-      err.textContent = 'All fields are required.';
-      err.classList.remove('hidden');
-      return;
-    }
+  if (withBp.length === 0) {
+    list.innerHTML = '<p class="hint" style="padding:0.5rem;">No blueprints found yet. Ingest repos to generate them.</p>';
+    return;
+  }
 
-    // Validate PAT by fetching repo info
-    err.classList.add('hidden');
-    document.getElementById('setup-save').textContent = 'Validating...';
-    document.getElementById('setup-save').disabled = true;
-
-    const cfg = { owner, repo, pat };
-    try {
-      const res = await ghFetch(`/repos/${owner}/${repo}`, cfg);
-      if (res.status === 401 || res.status === 403) throw new Error('Invalid token or no access');
-      if (res.status === 404) throw new Error('Repository not found');
-      if (!res.ok) throw new Error(`GitHub error ${res.status}`);
-
-      saveConfig(cfg);
-      overlay.classList.add('hidden');
-      toast('✅ Connected to repository!', 'success');
-      init(cfg);
-    } catch (e) {
-      err.textContent = e.message;
-      err.classList.remove('hidden');
-      document.getElementById('setup-save').textContent = 'Save & Connect';
-      document.getElementById('setup-save').disabled = false;
-    }
-  };
+  list.innerHTML = withBp.map(e => `
+    <label class="bp-check-item">
+      <input type="checkbox" value="${escHtml(e.blueprint_file)}" checked>
+      <span class="bp-check-label">${escHtml(e.title)}</span>
+    </label>
+  `).join('');
 }
 
 // ── Ingest Workflow ───────────────────────────────────────────────────────────
@@ -263,7 +277,6 @@ async function handleIngest(cfg) {
   const urls = raw.split('\n').map(u => u.trim()).filter(Boolean);
   if (urls.length === 0) return;
 
-  // Disable button during request
   btn.disabled = true;
   document.getElementById('ingest-btn-label').textContent = 'Triggering...';
   statusBar.className = 'status-bar';
@@ -274,39 +287,196 @@ async function handleIngest(cfg) {
 
   try {
     const ok = await triggerWorkflow(cfg, urls.join('\n'));
-    if (!ok) throw new Error('workflow_dispatch returned non-204');
+    if (!ok) throw new Error('workflow_dispatch failed');
 
     statusIcon.textContent = '🚀';
-    statusText.textContent = `Workflow triggered for ${urls.length} URL(s). Processing in GitHub Actions...`;
+    statusText.textContent = `GitHub Actions running for ${urls.length} URL(s). Blueprints & knowledge base are updating...`;
 
-    // Poll for run URL (appears after ~2s)
     setTimeout(async () => {
       const run = await getLatestRun(cfg);
       if (run) {
         runLink.href = run.html_url;
-        runLink.textContent = 'View live run →';
+        runLink.textContent = 'View live extraction run →';
         runLink.classList.remove('hidden');
       }
     }, 3000);
 
-    toast(`🚀 Ingesting ${urls.length} URL(s) via GitHub Actions!`, 'success');
+    toast(`🚀 Ingesting & extracting blueprints in GitHub Actions!`, 'success');
     urlInput.value = '';
 
-    // Auto-refresh entries after estimated completion (~90s)
     setTimeout(() => {
       toast('🔄 Refreshing knowledge base...', 'success');
       loadAndRender(cfg);
-    }, 90_000);
+    }, 75_000);
 
   } catch (e) {
     statusBar.className = 'status-bar error';
     statusIcon.textContent = '❌';
-    statusText.textContent = `Failed: ${e.message}. Check your PAT has "workflow" scope.`;
-    toast('❌ Failed to trigger workflow', 'error');
+    statusText.textContent = `Failed: ${e.message}. Ensure PAT has "repo" and "workflow" scopes.`;
+    toast('❌ Failed to trigger extraction', 'error');
   } finally {
     btn.disabled = false;
-    document.getElementById('ingest-btn-label').textContent = 'Ingest';
+    document.getElementById('ingest-btn-label').textContent = 'Ingest & Extract';
   }
+}
+
+// ── In-Browser AI Build Studio ────────────────────────────────────────────────
+
+async function handleStudioSend(cfg) {
+  const input = document.getElementById('studio-prompt-input');
+  const prompt = input.value.trim();
+  if (!prompt) return;
+
+  const geminiKey = cfg.geminiKey;
+  if (!geminiKey) {
+    toast('⚠️ Please add your Gemini API Key in Settings (⚙️) to use the Build Studio', 'error');
+    showSetupModal(cfg);
+    return;
+  }
+
+  const messagesContainer = document.getElementById('chat-messages');
+  const sendBtn = document.getElementById('studio-send-btn');
+  const statusEl = document.getElementById('studio-token-status');
+
+  // Append user message
+  messagesContainer.innerHTML += `
+    <div class="chat-message user">
+      <div class="message-bubble">${escHtml(prompt)}</div>
+    </div>
+  `;
+  input.value = '';
+  sendBtn.disabled = true;
+  statusEl.textContent = 'Gathering blueprints & querying Gemini...';
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  // Placeholder assistant message
+  const assistantId = 'msg-' + Date.now();
+  messagesContainer.innerHTML += `
+    <div class="chat-message assistant" id="${assistantId}">
+      <div class="message-bubble">
+        <div class="spinner"></div>
+        <span style="font-size:0.85rem;color:var(--text-dim);margin-left:0.5rem;">Synthesizing blueprints &amp; generating code...</span>
+      </div>
+    </div>
+  `;
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  try {
+    // 1. Gather checked blueprints
+    const checkedBps = Array.from(document.querySelectorAll('#blueprint-selector-list input[type="checkbox"]:checked'))
+      .map(cb => cb.value);
+
+    let blueprintsContext = '';
+    for (const bpPath of checkedBps) {
+      try {
+        const content = await fetchBlueprintContent(cfg, bpPath);
+        blueprintsContext += `\n\n--- BLUEPRINT: ${bpPath} ---\n${content}`;
+      } catch (err) {
+        console.warn('Could not load blueprint:', bpPath, err);
+      }
+    }
+
+    // 2. Call Gemini API
+    const systemPrompt = `You are an expert Principal Android Systems & Kernel Engineer.
+You specialize in KernelSU, Magisk/Zygisk, APatch, Linux kernel drivers, Android init, and sepolicy.
+The user wants you to generate code, scaffold modules, or explain technical mechanics.
+
+Use the following VERIFIED TECHNICAL BLUEPRINTS as your primary ground truth and architectural reference:
+${blueprintsContext || 'No specific blueprints attached.'}
+
+Rules:
+- Provide COMPLETE, production-ready, compilable code.
+- Never use placeholder comments like "// implement here".
+- Cite the exact mechanism or blueprint you based your design on.`;
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+    const payload = {
+      contents: [
+        { role: 'user', parts: [{ text: `${systemPrompt}\n\nUSER REQUEST: ${prompt}` }] }
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 3000,
+      }
+    };
+
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+
+    const assistantMsg = document.getElementById(assistantId);
+    assistantMsg.querySelector('.message-bubble').innerHTML = formatMarkdown(replyText);
+
+    statusEl.textContent = '✅ Code generated successfully.';
+  } catch (err) {
+    const assistantMsg = document.getElementById(assistantId);
+    assistantMsg.querySelector('.message-bubble').innerHTML = `
+      <p style="color:var(--red);">⚠️ Generation failed: ${escHtml(err.message)}</p>
+      <p style="font-size:0.8rem;color:var(--text-dim);">Verify your Gemini API key in Settings (⚙️).</p>
+    `;
+    statusEl.textContent = '❌ Generation error.';
+  } finally {
+    sendBtn.disabled = false;
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+}
+
+// ── Setup Modal ───────────────────────────────────────────────────────────────
+
+function showSetupModal(prefill = {}) {
+  const overlay = document.getElementById('setup-overlay');
+  overlay.classList.remove('hidden');
+
+  if (prefill.owner) document.getElementById('setup-owner').value = prefill.owner;
+  if (prefill.repo)  document.getElementById('setup-repo').value  = prefill.repo;
+  if (prefill.geminiKey) document.getElementById('setup-gemini-key').value = prefill.geminiKey;
+
+  document.getElementById('setup-save').onclick = async () => {
+    const owner = document.getElementById('setup-owner').value.trim();
+    const repo  = document.getElementById('setup-repo').value.trim();
+    const pat   = document.getElementById('setup-pat').value.trim();
+    const geminiKey = document.getElementById('setup-gemini-key').value.trim();
+    const err   = document.getElementById('setup-error');
+
+    if (!owner || !repo || !pat) {
+      err.textContent = 'GitHub Username, Repo, and PAT are required.';
+      err.classList.remove('hidden');
+      return;
+    }
+
+    err.classList.add('hidden');
+    document.getElementById('setup-save').textContent = 'Validating...';
+    document.getElementById('setup-save').disabled = true;
+
+    const cfg = { owner, repo, pat, geminiKey };
+    try {
+      const res = await ghFetch(`/repos/${owner}/${repo}`, cfg);
+      if (res.status === 401 || res.status === 403) throw new Error('Invalid token or no access');
+      if (res.status === 404) throw new Error('Repository not found');
+      if (!res.ok) throw new Error(`GitHub error ${res.status}`);
+
+      saveConfig(cfg);
+      overlay.classList.add('hidden');
+      toast('✅ Connected to repository!', 'success');
+      init(cfg);
+    } catch (e) {
+      err.textContent = e.message;
+      err.classList.remove('hidden');
+    } finally {
+      document.getElementById('setup-save').textContent = 'Save & Connect';
+      document.getElementById('setup-save').disabled = false;
+    }
+  };
 }
 
 // ── Load & Render ─────────────────────────────────────────────────────────────
@@ -317,7 +487,7 @@ let _searchQuery = '';
 
 async function loadAndRender(cfg) {
   const grid = document.getElementById('entries-grid');
-  grid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading knowledge base...</p></div>';
+  grid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading knowledge base and blueprints...</p></div>';
 
   try {
     _allEntries = await fetchKnowledgeJson(cfg);
@@ -327,6 +497,7 @@ async function loadAndRender(cfg) {
 
     buildFilterSidebar(_allEntries);
     renderEntries(_allEntries, _searchQuery, _activeCategory);
+    updateBlueprintSelector(_allEntries);
 
     if (_allEntries.length > 0) {
       const last = _allEntries.reduce((a, b) =>
@@ -340,15 +511,12 @@ async function loadAndRender(cfg) {
       <div class="error-state">
         <span style="font-size:2rem">⚠️</span>
         <p>Could not load knowledge base.<br>
-        Make sure <code>data/knowledge.json</code> exists in your repo,<br>
-        and your token has repository read access.</p>
+        Make sure <code>data/knowledge.json</code> exists in your repo.</p>
         <p style="font-size:0.75rem;color:var(--text-dim)">${escHtml(e.message)}</p>
       </div>
     `;
   }
 }
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
 
 function toast(msg, type = '') {
   const container = document.getElementById('toast-container');
@@ -359,18 +527,30 @@ function toast(msg, type = '') {
   setTimeout(() => el.remove(), 4000);
 }
 
-// ── Repo Link ─────────────────────────────────────────────────────────────────
-
-function updateRepoLink(cfg) {
-  const link = document.getElementById('repo-link');
-  link.href = `https://github.com/${cfg.owner}/${cfg.repo}`;
-}
-
-// ── Main Init ─────────────────────────────────────────────────────────────────
+// ── Init & Tab Switching ──────────────────────────────────────────────────────
 
 function init(cfg) {
-  updateRepoLink(cfg);
   loadAndRender(cfg);
+
+  // Tab switching
+  const tabVaultBtn = document.getElementById('tab-vault-btn');
+  const tabStudioBtn = document.getElementById('tab-studio-btn');
+  const vaultView = document.getElementById('vault-view');
+  const studioView = document.getElementById('studio-view');
+
+  tabVaultBtn.addEventListener('click', () => {
+    tabVaultBtn.classList.add('active');
+    tabStudioBtn.classList.remove('active');
+    vaultView.classList.remove('hidden');
+    studioView.classList.add('hidden');
+  });
+
+  tabStudioBtn.addEventListener('click', () => {
+    tabStudioBtn.classList.add('active');
+    tabVaultBtn.classList.remove('active');
+    studioView.classList.remove('hidden');
+    vaultView.classList.add('hidden');
+  });
 
   // Search
   const searchInput = document.getElementById('search-input');
@@ -379,7 +559,7 @@ function init(cfg) {
     renderEntries(_allEntries, _searchQuery, _activeCategory);
   });
 
-  // Filter clicks (delegated)
+  // Filter clicks
   document.getElementById('filter-list').addEventListener('click', e => {
     const btn = e.target.closest('.filter-btn');
     if (!btn) return;
@@ -396,7 +576,7 @@ function init(cfg) {
     renderEntries(_allEntries, _searchQuery, _activeCategory);
   });
 
-  // Ingest button
+  // Ingest inputs
   const urlInput = document.getElementById('url-input');
   const ingestBtn = document.getElementById('ingest-btn');
   const ingestLabel = document.getElementById('ingest-btn-label');
@@ -404,30 +584,27 @@ function init(cfg) {
   urlInput.addEventListener('input', () => {
     const count = urlInput.value.trim().split('\n').filter(l => l.trim()).length;
     ingestBtn.disabled = count === 0;
-    ingestLabel.textContent = count > 1 ? `Ingest ${count} URLs` : 'Ingest';
+    ingestLabel.textContent = count > 1 ? `Ingest ${count} URLs` : 'Ingest & Extract';
   });
 
   ingestBtn.addEventListener('click', () => handleIngest(cfg));
 
-  // Clear button
   document.getElementById('clear-btn').addEventListener('click', () => {
     urlInput.value = '';
     ingestBtn.disabled = true;
-    ingestLabel.textContent = 'Ingest';
+    ingestLabel.textContent = 'Ingest & Extract';
   });
 
-  // Refresh
   document.getElementById('refresh-btn').addEventListener('click', () => {
     toast('🔄 Refreshing...', '');
     loadAndRender(cfg);
   });
 
-  // Settings
   document.getElementById('settings-btn').addEventListener('click', () => {
     showSetupModal(cfg);
   });
 
-  // Blueprint Viewer (delegated)
+  // Blueprint Viewer modal
   document.getElementById('entries-grid').addEventListener('click', async e => {
     const btn = e.target.closest('.btn-blueprint');
     if (!btn) return;
@@ -438,22 +615,27 @@ function init(cfg) {
     const titleEl = document.getElementById('blueprint-title');
     const rawLink = document.getElementById('blueprint-raw-link');
     const copyBtn = document.getElementById('blueprint-copy');
+    const sendToStudioBtn = document.getElementById('blueprint-send-to-studio');
 
     titleEl.textContent = `📐 Blueprint: ${title}`;
     body.innerHTML = '<div class="spinner"></div><p>Loading blueprint...</p>';
     overlay.classList.remove('hidden');
 
-    const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/${bpPath}`;
     rawLink.href = `https://github.com/${cfg.owner}/${cfg.repo}/blob/main/${bpPath}`;
 
     try {
-      const res = await fetch(rawUrl + '?t=' + Date.now());
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const md = await res.text();
-      body.innerHTML = `<pre style="white-space:pre-wrap;font-family:monospace;font-size:0.85rem;line-height:1.5;">${escHtml(md)}</pre>`;
+      const md = await fetchBlueprintContent(cfg, bpPath);
+      body.innerHTML = `<div style="line-height:1.6;">${formatMarkdown(md)}</div>`;
       copyBtn.onclick = () => {
         navigator.clipboard.writeText(md);
         toast('📋 Blueprint copied to clipboard!', 'success');
+      };
+      sendToStudioBtn.onclick = () => {
+        overlay.classList.add('hidden');
+        tabStudioBtn.click();
+        const input = document.getElementById('studio-prompt-input');
+        input.value = `Using what is defined in the ${title} blueprint, `;
+        input.focus();
       };
     } catch (err) {
       body.innerHTML = `<p style="color:var(--red);">Failed to load blueprint: ${escHtml(err.message)}</p>`;
@@ -463,15 +645,33 @@ function init(cfg) {
   document.getElementById('blueprint-close').addEventListener('click', () => {
     document.getElementById('blueprint-overlay').classList.add('hidden');
   });
-}
 
+  // Studio Chat
+  document.getElementById('studio-send-btn').addEventListener('click', () => handleStudioSend(cfg));
+  document.getElementById('studio-prompt-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleStudioSend(cfg);
+    }
+  });
+
+  document.getElementById('clear-chat-btn').addEventListener('click', () => {
+    document.getElementById('chat-messages').innerHTML = `
+      <div class="chat-message assistant">
+        <div class="message-bubble">
+          <p>Chat cleared. Select blueprints on the left and ask a question to begin building.</p>
+        </div>
+      </div>
+    `;
+  });
+}
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 (function bootstrap() {
   const cfg = loadConfig();
   if (!isConfigured(cfg)) {
-    showSetupModal();
+    showSetupModal({ owner: 'siaw-dev', repo: 'learn-and-build' });
   } else {
     init(cfg);
   }
