@@ -126,6 +126,28 @@ class JsonStore:
         self._save_raw(rows)
         return True
 
+    def upsert(self, entry: KnowledgeEntry) -> bool:
+        """Insert or replace an existing entry by URL."""
+        rows = self._load_raw()
+        clean_url = entry.url.rstrip("/").lower()
+        idx = -1
+        for i, r in enumerate(rows):
+            if r.get("url", "").rstrip("/").lower() == clean_url:
+                idx = i
+                break
+
+        if not entry.content_hash:
+            entry.content_hash = hashlib.sha256(clean_url.encode()).hexdigest()
+
+        new_row = self._to_row(entry)
+        if idx >= 0:
+            rows[idx] = new_row
+        else:
+            rows.append(new_row)
+
+        self._save_raw(rows)
+        return True
+
     def get_all(
         self,
         category: Optional[str] = None,

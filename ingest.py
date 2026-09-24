@@ -32,7 +32,7 @@ from rich.table import Table
 
 from curator.config import BLUEPRINTS_DIR, DB_PATH, JSON_STORE_PATH
 from curator.ingestors import ingest_github_repo, ingest_youtube_video, ingest_webpage
-from curator.models import KnowledgeEntry
+from curator.models import KnowledgeEntry, SourceType
 from curator.output import render_readme
 from curator.processing import classify_entry, extract_blueprint, summarize_entry
 from curator.storage import Database, JsonStore
@@ -301,25 +301,56 @@ def blueprint(name: str | None):
 
 @cli.command()
 @_STORE_OPTION
-def backfill_blueprints(store: str):
-    """Generate missing blueprints for all existing entries in the database."""
+@click.option("--only-stubs/--all", default=True, help="Only backfill entries that are stubs")
+def backfill_blueprints(store: str, only_stubs: bool):
+    """Generate missing or upgrade stub blueprints for existing entries."""
+    from pathlib import Path
     store_obj = make_store(store)
     if isinstance(store_obj, JsonStore):
         entries = store_obj.get_all()
     else:
         entries = asyncio.run(store_obj.get_all())
 
-    console.print(f"[bold]Checking {len(entries)} entries for blueprints...[/bold]")
+    console.print(f"[bold]Checking {len(entries)} entries for blueprints (only_stubs={only_stubs})...[/bold]")
     updated = 0
     for entry in entries:
-        bp_path = extract_blueprint(entry, BLUEPRINTS_DIR)
-        if bp_path:
-            entry.blueprint_file = f"blueprints/{bp_path.name}"
-            updated += 1
+        bp_name = Path(entry.blueprint_file).name if entry.blueprint_file else ""
+        existing_file = BLUEPRINTS_DIR / bp_name if bp_name else None
+
+        # Check if already verified with substantial content
+        if existing_file and existing_file.exists():
+            file_text = existing_file.read_text(encoding="utf-8")
+            if len(file_text) > 2500 and "## 1. Architectural Topology" in file_text:
+                if entry.blueprint_status != "verified":
+                    entry.blueprint_status = "verified"
+                    console.print(f"  [green]✓ {entry.title} already has verified blueprint ({len(file_text)} bytes). Updated status.[/green]")
+                    updated += 1
+                if only_stubs:
+                    continue
+
+        console.print(f"\n[bold cyan]Backfilling blueprint for:[/bold cyan] {entry.title}")
+        # Fetch fresh raw content + code snippets if missing
+        if not entry.raw_content:
+            with console.status("  Fetching source code / content...", spinner="dots"):
+                try:
+                    if entry.source_type == SourceType.GITHUB:
+                        fresh = ingest_github_repo(entry.url)
+                        entry.raw_content = fresh.raw_content
+                    elif entry.source_type == SourceType.WEB:
+                        fresh = ingest_webpage(entry.url)
+                        entry.raw_content = fresh.raw_content
+                except Exception as e:
+                    console.print(f"  [yellow]Failed to fetch raw content: {e}[/yellow]")
+
+        with console.status("  Extracting technical blueprint...", spinner="dots"):
+            bp_path = extract_blueprint(entry, BLUEPRINTS_DIR)
+            if bp_path:
+                entry.blueprint_file = f"blueprints/{bp_path.name}"
+                updated += 1
 
     if isinstance(store_obj, JsonStore):
         store_obj.save(entries)
-    console.print(f"[bold green]✅ Generated/updated {updated} blueprints![/bold green]")
+    console.print(f"\n[bold green]✅ Finished backfill! Updated {updated} blueprints.[/bold green]")
 
 
 

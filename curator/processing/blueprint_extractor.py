@@ -114,8 +114,11 @@ def extract_blueprint(
     Returns the Path to the written file, or None if extraction failed.
     """
     blueprints_dir.mkdir(parents=True, exist_ok=True)
-    slug = _slugify(entry.title or entry.url)
-    blueprint_file = blueprints_dir / f"{slug}.md"
+    if entry.blueprint_file:
+        blueprint_file = blueprints_dir / Path(entry.blueprint_file).name
+    else:
+        slug = _slugify(entry.title or entry.url)
+        blueprint_file = blueprints_dir / f"{slug}.md"
 
     if GEMINI_API_KEYS:
         content_for_ai = (entry.raw_content or entry.description or entry.title)[:8000]
