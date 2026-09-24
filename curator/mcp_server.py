@@ -99,6 +99,10 @@ TOOLS_SCHEMA = [
     },
 ]
 
+# Attach standard MCP inputSchema for full spec compliance
+for _tool in TOOLS_SCHEMA:
+    _tool["inputSchema"] = _tool["parameters"]
+
 
 def _load_entries() -> list[dict]:
     if _JSON_PATH.exists():
