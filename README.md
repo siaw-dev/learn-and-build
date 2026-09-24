@@ -13,7 +13,7 @@
 ## 📚 Contents
 
 - [Root Solutions](#root-solutions)
-- [Modules & Overlays](#modules-overlays)
+- [Other](#other)
 
 ---
 
@@ -60,7 +60,7 @@
 ---
 
 
-## Modules & Overlays
+## Other
 
 ### 📄 [Android Root Apps, Modules & Rooting Guides | Awesome Android Root](https://awesome-android-root.zhoe.org/)
 
