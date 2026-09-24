@@ -288,5 +288,63 @@ def list_facts(domain: str | None, as_json: bool):
     console.print(table)
 
 
+@cli.command("scaffold")
+@click.argument("slug")
+@click.option("--out", "-o", default=None, help="Output directory (defaults to ./<slug>-scaffold)")
+@click.option("--json", "as_json", is_flag=True, help="Output in machine-readable JSON format")
+def scaffold_entry(slug: str, out: str | None, as_json: bool):
+    """Generate compilable starter files from Section 4 of a blueprint."""
+    from curator.scaffolder import scaffold_blueprint
+
+    slug_clean = slug.removesuffix(".md").replace("blueprints/", "")
+    candidate = _BLUEPRINTS_DIR / f"{slug_clean}.md"
+
+    if not candidate.exists():
+        found = list(_BLUEPRINTS_DIR.glob(f"*{slug_clean}*.md"))
+        if found:
+            candidate = found[0]
+
+    if not candidate.exists():
+        if as_json:
+            click.echo(json.dumps({"error": f"Blueprint '{slug}' not found locally."}, indent=2))
+            sys.exit(1)
+        console.print(f"[bold red]❌ Blueprint '{slug}' not found locally in blueprints/.[/bold red]")
+        sys.exit(1)
+
+    target_dir = Path(out) if out else Path(f"./{candidate.stem}-scaffold")
+    try:
+        res = scaffold_blueprint(candidate, target_dir)
+        if as_json:
+            click.echo(json.dumps({
+                "slug": res.slug,
+                "target_dir": str(res.target_dir.resolve()),
+                "files": [f.filename for f in res.files],
+            }, indent=2))
+            return
+
+        console.print(Panel(
+            f"[bold green]✅ Project Scaffolded Successfully![/bold green]\n\n"
+            f"[bold]Target Directory:[/bold] [cyan]{res.target_dir.resolve()}[/cyan]\n"
+            f"[bold]Generated Files ({len(res.files)}):[/bold]\n"
+            + "\n".join(f"  • [green]{f.filename}[/green] ({f.language})" for f in res.files)
+            + f"\n\n[dim]See {res.target_dir}/README.md for build instructions.[/dim]",
+            title=f"🚀 Scaffold: {res.slug}",
+            border_style="green",
+        ))
+    except Exception as e:
+        if as_json:
+            click.echo(json.dumps({"error": str(e)}, indent=2))
+            sys.exit(1)
+        console.print(f"[bold red]❌ Scaffolding failed:[/bold red] {e}")
+        sys.exit(1)
+
+
+@cli.command("mcp")
+def start_mcp():
+    """Start the native Model Context Protocol (MCP) server on stdio."""
+    from curator.mcp_server import run_stdio_server
+    run_stdio_server()
+
+
 if __name__ == "__main__":
     cli()
