@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# scripts/vault — Global CLI Wrapper for Learn & Build Knowledge Vault
+set -euo pipefail
+
+# Resolve symlink to real source file
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+export PYTHONPATH="${REPO_DIR}:${PYTHONPATH:-}"
+
+if [[ -f "/home/lenovo/.local/lib/libdns_override.so" ]]; then
+  export LD_PRELOAD="/home/lenovo/.local/lib/libdns_override.so:${LD_PRELOAD:-}"
+fi
+
+exec python3 -m curator.cli_vault "$@"

@@ -1,0 +1,40 @@
+name: Vault Quality Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+      - "blueprints/**"
+      - "docs/**"
+      - "scripts/**"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vault-quality-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Vault Integrity & Schemas
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate Vault Integrity
+        run: python3 scripts/check_vault_integrity.py
+
+      - name: Validate Frontend Syntax
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check JavaScript Syntax
+        run: node -c docs/app.js

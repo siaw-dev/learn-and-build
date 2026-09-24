@@ -54,11 +54,16 @@ def cli():
 
 @cli.command("list")
 @click.option("--verified-only", is_flag=True, help="Show only verified AI blueprints (exclude baseline stubs)")
-def list_entries(verified_only: bool):
+@click.option("--json", "as_json", is_flag=True, help="Output in machine-readable JSON format")
+def list_entries(verified_only: bool, as_json: bool):
     """List all architectural resources in the vault."""
     entries = _load_vault_entries()
     if verified_only:
         entries = [e for e in entries if e.get("blueprint_status") == "verified"]
+
+    if as_json:
+        click.echo(json.dumps(entries, indent=2, ensure_ascii=False))
+        return
 
     table = Table(title=f"🏛️ Knowledge Vault ({len(entries)} items)", border_style="cyan")
     table.add_column("Title", style="bold white", no_wrap=True)
@@ -83,7 +88,8 @@ def list_entries(verified_only: bool):
 @cli.command("search")
 @click.argument("query")
 @click.option("--category", "-c", default=None, help="Filter by category")
-def search_entries(query: str, category: str | None):
+@click.option("--json", "as_json", is_flag=True, help="Output in machine-readable JSON format")
+def search_entries(query: str, category: str | None, as_json: bool):
     """Search blueprints by keyword, hook, tag, or technology."""
     entries = _load_vault_entries()
     q = query.lower()
@@ -100,6 +106,10 @@ def search_entries(query: str, category: str | None):
         ]).lower()
         if q in haystack:
             matches.append(e)
+
+    if as_json:
+        click.echo(json.dumps(matches, indent=2, ensure_ascii=False))
+        return
 
     if not matches:
         console.print(f"[yellow]No blueprints found matching '{query}'.[/yellow]")
@@ -127,7 +137,8 @@ def search_entries(query: str, category: str | None):
 
 @cli.command("blueprint")
 @click.argument("slug")
-def show_blueprint(slug: str):
+@click.option("--json", "as_json", is_flag=True, help="Output in machine-readable JSON format")
+def show_blueprint(slug: str, as_json: bool):
     """Display the full architectural blueprint for an entry."""
     # Find matching blueprint file
     slug_clean = slug.removesuffix(".md").replace("blueprints/", "")
@@ -141,6 +152,14 @@ def show_blueprint(slug: str):
 
     if candidate.exists():
         text = candidate.read_text(encoding="utf-8")
+        if as_json:
+            click.echo(json.dumps({
+                "slug": slug_clean,
+                "file": candidate.name,
+                "path": str(candidate),
+                "content": text,
+            }, indent=2, ensure_ascii=False))
+            return
         console.print(Panel(Markdown(text), title=f"📐 Technical Blueprint: {candidate.name}", border_style="green"))
     else:
         # Try fetching from GitHub raw
@@ -148,8 +167,19 @@ def show_blueprint(slug: str):
         try:
             with urlopen(url, timeout=5) as res:
                 text = res.read().decode("utf-8")
+                if as_json:
+                    click.echo(json.dumps({
+                        "slug": slug_clean,
+                        "file": f"{slug_clean}.md",
+                        "source": "cloud",
+                        "content": text,
+                    }, indent=2, ensure_ascii=False))
+                    return
                 console.print(Panel(Markdown(text), title=f"📐 Technical Blueprint: {slug_clean}.md (Cloud)", border_style="green"))
         except Exception:
+            if as_json:
+                click.echo(json.dumps({"error": f"Blueprint '{slug}' not found locally or in cloud vault."}, indent=2))
+                sys.exit(1)
             console.print(f"[bold red]❌ Blueprint '{slug}' not found locally or in cloud vault.[/bold red]")
 
 
@@ -215,6 +245,47 @@ def add_fact(fact_text: str, domain: str, tags: str):
     facts_file.parent.mkdir(parents=True, exist_ok=True)
     facts_file.write_text(json.dumps(facts, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     console.print(f"[bold green]✅ Saved architectural fact to {facts_file.name}![/bold green]")
+
+
+@cli.command("facts")
+@click.option("--domain", "-d", default=None, help="Filter facts by architecture domain")
+@click.option("--json", "as_json", is_flag=True, help="Output in machine-readable JSON format")
+def list_facts(domain: str | None, as_json: bool):
+    """List all architectural invariants and engineering field discoveries."""
+    facts_file = _ROOT / "data" / "facts.json"
+    facts = []
+    if facts_file.exists():
+        try:
+            facts = json.loads(facts_file.read_text(encoding="utf-8"))
+        except Exception:
+            facts = []
+
+    if domain:
+        facts = [f for f in facts if f.get("domain", "").lower() == domain.lower()]
+
+    if as_json:
+        click.echo(json.dumps(facts, indent=2, ensure_ascii=False))
+        return
+
+    if not facts:
+        console.print("[yellow]No architectural facts recorded yet.[/yellow]")
+        return
+
+    table = Table(title=f"🧠 Engineering Facts & Field Discoveries ({len(facts)})", border_style="green")
+    table.add_column("Domain", style="cyan", no_wrap=True)
+    table.add_column("Fact / Invariant", style="bold white")
+    table.add_column("Tags", style="yellow")
+    table.add_column("Recorded", style="dim", no_wrap=True)
+
+    for f in facts:
+        table.add_row(
+            f.get("domain", "General"),
+            f.get("fact", ""),
+            ", ".join(f.get("tags", [])),
+            f.get("recorded_at", "")[:10],
+        )
+
+    console.print(table)
 
 
 if __name__ == "__main__":

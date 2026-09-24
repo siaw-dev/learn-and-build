@@ -29,6 +29,8 @@ function saveConfig(cfg) {
 // ── Application State ─────────────────────────────────────────────────────────
 const state = {
   entries: [],
+  facts: [],
+  activeTab: 'blueprints',
   selectedCategory: 'all',
   selectedSource: 'all',
   searchQuery: '',
@@ -107,17 +109,38 @@ function showToast(message, type = 'info') {
 // ── Data Fetching ─────────────────────────────────────────────────────────────
 async function loadKnowledgeVault() {
   const cfg = getConfig();
-  const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/data/knowledge.json?t=${Date.now()}`;
+  const knowledgeUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/data/knowledge.json?t=${Date.now()}`;
+  const factsUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/data/facts.json?t=${Date.now()}`;
   
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    state.entries = Array.isArray(data) ? data : [];
+    // 1. Fetch Blueprints / Knowledge Entries
+    let res = await fetch(knowledgeUrl).catch(() => null);
+    if (!res || !res.ok) {
+      res = await fetch('../data/knowledge.json?t=' + Date.now()).catch(() => null);
+    }
+    if (res && res.ok) {
+      const data = await res.json();
+      state.entries = Array.isArray(data) ? data : [];
+    }
+
+    // 2. Fetch Engineering Facts & Discoveries
+    let resFacts = await fetch(factsUrl).catch(() => null);
+    if (!resFacts || !resFacts.ok) {
+      resFacts = await fetch('../data/facts.json?t=' + Date.now()).catch(() => null);
+    }
+    if (resFacts && resFacts.ok) {
+      const factsData = await resFacts.json();
+      state.facts = Array.isArray(factsData) ? factsData : [];
+    }
     
     // Update Header Counts
-    document.getElementById('total-count-label').textContent = `${state.entries.length} blueprints`;
-    document.getElementById('count-all').textContent = state.entries.length;
+    const totalCountEl = document.getElementById('total-count-label');
+    if (totalCountEl) totalCountEl.textContent = `${state.entries.length} blueprints • ${state.facts.length} facts`;
+    const countAllEl = document.getElementById('count-all');
+    if (countAllEl) countAllEl.textContent = state.entries.length;
+    const factsCountEl = document.getElementById('facts-count-badge');
+    if (factsCountEl) factsCountEl.textContent = state.facts.length;
+
     document.getElementById('repo-name-label').textContent = `${cfg.owner}/${cfg.repo}`;
     document.getElementById('repo-link').href = `https://github.com/${cfg.owner}/${cfg.repo}`;
     
@@ -125,7 +148,11 @@ async function loadKnowledgeVault() {
     document.getElementById('footer-sync-time').textContent = `Last synchronized: ${now.toLocaleTimeString()}`;
 
     buildCategorySidebar();
-    renderCards();
+    if (state.activeTab === 'blueprints') {
+      renderCards();
+    } else {
+      renderFacts();
+    }
   } catch (err) {
     console.error('Failed to load vault data:', err);
     document.getElementById('cards-container').innerHTML = `
@@ -172,7 +199,102 @@ function selectCategory(category) {
   document.querySelectorAll('.category-nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.category === category);
   });
-  renderCards();
+  if (state.activeTab === 'blueprints') {
+    renderCards();
+  } else {
+    renderFacts();
+  }
+}
+
+// ── View Tab Switching ────────────────────────────────────────────────────────
+function switchTab(tabName) {
+  state.activeTab = tabName;
+  document.getElementById('tab-blueprints')?.classList.toggle('active', tabName === 'blueprints');
+  document.getElementById('tab-facts')?.classList.toggle('active', tabName === 'facts');
+  document.getElementById('tab-blueprints')?.setAttribute('aria-selected', tabName === 'blueprints');
+  document.getElementById('tab-facts')?.setAttribute('aria-selected', tabName === 'facts');
+
+  const cardsContainer = document.getElementById('cards-container');
+  const factsContainer = document.getElementById('facts-container');
+
+  if (tabName === 'blueprints') {
+    cardsContainer?.classList.remove('hidden');
+    factsContainer?.classList.add('hidden');
+    renderCards();
+  } else {
+    cardsContainer?.classList.add('hidden');
+    factsContainer?.classList.remove('hidden');
+    renderFacts();
+  }
+}
+
+// ── Facts Feed Rendering ──────────────────────────────────────────────────────
+function renderFacts() {
+  const container = document.getElementById('facts-container');
+  const countBadge = document.getElementById('facts-count-badge');
+  if (!container) return;
+
+  let filtered = [...state.facts];
+
+  // Category filter
+  if (state.selectedCategory !== 'all') {
+    filtered = filtered.filter(f => (f.domain || '').toLowerCase() === state.selectedCategory.toLowerCase());
+  }
+
+  // Search filter
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    filtered = filtered.filter(f =>
+      (f.fact || '').toLowerCase().includes(q) ||
+      (f.domain || '').toLowerCase().includes(q) ||
+      (f.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
+
+  if (countBadge) countBadge.textContent = state.facts.length;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>No engineering field notes found matching current filter.</p>
+        <p class="field-hint">Record facts via CLI: <code>vault fact "&lt;text&gt;"</code></p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(f => `
+    <article class="fact-card">
+      <div class="fact-card-top">
+        <span class="fact-domain">${escHtml(f.domain || 'General')}</span>
+        <span class="fact-date">${escHtml((f.recorded_at || '').slice(0, 10))}</span>
+      </div>
+      <div class="fact-text">${escHtml(f.fact)}</div>
+      <div class="fact-card-bottom">
+        <div class="fact-tags">
+          ${(f.tags || []).map(t => `<span class="fact-tag">#${escHtml(t)}</span>`).join('')}
+        </div>
+        <button class="fact-copy-btn" title="Copy fact" data-fact="${escHtml(f.fact)}">
+          <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+    </article>
+  `).join('');
+
+  container.querySelectorAll('.fact-copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const text = btn.dataset.fact;
+      if (text) {
+        navigator.clipboard.writeText(text);
+        btn.innerHTML = `<svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+        showToast('Fact copied to clipboard', 'info');
+        setTimeout(() => {
+          btn.innerHTML = `<svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+        }, 1500);
+      }
+    });
+  });
 }
 
 // ── Card Grid Rendering ───────────────────────────────────────────────────────
@@ -346,6 +468,23 @@ async function openBlueprintViewer(blueprintFile, title, category, sourceUrl, st
         </div>
       `;
     }
+
+    if (md.includes('### Battle-Tested Field Notes & Production Gotchas')) {
+      const parts = md.split('### Battle-Tested Field Notes & Production Gotchas');
+      if (parts.length > 1) {
+        const notesMarkdown = parts[1].trim();
+        contentHtml += `
+          <div class="modal-field-notes-banner">
+            <h4>
+              <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span>Battle-Tested Field Notes &amp; Production Gotchas</span>
+            </h4>
+            ${parseMarkdown(notesMarkdown)}
+          </div>
+        `;
+      }
+    }
+
     contentHtml += parseMarkdown(md);
     body.innerHTML = contentHtml;
   } catch (err) {
@@ -492,11 +631,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load Initial Data
   loadKnowledgeVault();
 
+  // Tab Switcher
+  document.getElementById('tab-blueprints')?.addEventListener('click', () => switchTab('blueprints'));
+  document.getElementById('tab-facts')?.addEventListener('click', () => switchTab('facts'));
+
   // Search input reactive
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', (e) => {
     state.searchQuery = e.target.value.trim();
-    renderCards();
+    if (state.activeTab === 'blueprints') {
+      renderCards();
+    } else {
+      renderFacts();
+    }
   });
 
   // Keyboard shortcut '/' to search

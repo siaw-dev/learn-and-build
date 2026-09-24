@@ -40,14 +40,25 @@ from curator.storage import Database, JsonStore
 console = Console()
 
 SEED_URLS = [
+    # Low-Level Systems & Kernel Interception
     "https://github.com/topjohnwu/Magisk",
     "https://github.com/tiann/KernelSU",
     "https://github.com/bmax121/APatch",
     "https://github.com/LSPosed/LSPosed",
-    "https://github.com/TeamWin/Team-Win-Recovery-Project",
-    "https://github.com/topjohnwu/libsu",
     "https://github.com/RikkaApps/Shizuku",
     "https://github.com/awesome-android-root/awesome-android-root",
+    # Systems, eBPF & Kernel Tracing
+    "https://github.com/libbpf/libbpf",
+    # Concurrency, Async & Event Loops
+    "https://github.com/tokio-rs/tokio",
+    # Bytecode VMs, JIT & Compilers
+    "https://github.com/bytecodealliance/wasmtime",
+    # Distributed Systems & Consensus
+    "https://github.com/hashicorp/raft",
+    # Networking, Protocols & Serialization
+    "https://github.com/square/retrofit",
+    # Core Languages & Systems Utilities
+    "https://github.com/google/guava",
 ]
 
 
