@@ -63,7 +63,7 @@ def _call_classify(client, prompt: str) -> dict:
     interaction = client.interactions.create(
         model=GEMINI_MODEL,
         input=prompt,
-        config={"temperature": 0.1, "max_output_tokens": 512},
+        generation_config={"temperature": 0.1, "max_output_tokens": 512},
     )
     raw = (interaction.output_text or "").strip()
     raw = re.sub(r"^```[a-z]*\n?", "", raw)

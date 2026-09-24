@@ -40,7 +40,7 @@ def _call_summarize(client, prompt: str) -> str:
     interaction = client.interactions.create(
         model=GEMINI_MODEL,
         input=prompt,
-        config={"temperature": 0.3, "max_output_tokens": 150},
+        generation_config={"temperature": 0.3, "max_output_tokens": 150},
     )
     return (interaction.output_text or "").strip().strip('"\'')
 
