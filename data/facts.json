@@ -7,5 +7,65 @@
       "linux6"
     ],
     "recorded_at": "2026-09-24T15:18:55.108270"
+  },
+  {
+    "fact": "Huawei / Vodafone USB modems (e.g. K4203) enumerate initially as USB Mass Storage (vendor 12d1:1f1c) and require an explicit SCSI eject sequence (55534243123456780000000000000011062000000101000100000000000000) sent via usb_modeswitch to flip into high-speed CDC/serial modem interfaces (12d1:157a).",
+    "domain": "Kernel & Low-Level Systems",
+    "tags": [
+      "usb",
+      "udev",
+      "kernel",
+      "hardware",
+      "modem"
+    ],
+    "recorded_at": "2026-09-27T01:23:07.620105+00:00"
+  },
+  {
+    "fact": "Running headless browser automation (Puppeteer/Playwright) on ARM Android/Termux fails due to missing glibc/Chromium binaries; headless automation on Android must use raw WebSocket protocol clients (e.g., Baileys) and pure Node.js sockets instead of browser engines.",
+    "domain": "Web Architecture & Protocols",
+    "tags": [
+      "termux",
+      "android",
+      "websockets",
+      "puppeteer",
+      "baileys"
+    ],
+    "recorded_at": "2026-09-27T01:23:12.130259+00:00"
+  },
+  {
+    "fact": "WhatsApp voice note compatibility requires Opus audio inside an OGG container with a strict sample rate of 48,000 Hz and mono audio channel; sending raw AAC or standard MP3 causes voice notes to render as generic audio files without waveform scrubbing.",
+    "domain": "Tools, CLI & Utilities",
+    "tags": [
+      "ffmpeg",
+      "audio",
+      "opus",
+      "whatsapp",
+      "transcoding"
+    ],
+    "recorded_at": "2026-09-27T01:23:12.510694+00:00"
+  },
+  {
+    "fact": "Dalvik VMP register scrambling using a coprime affine permutation ((r * A + B) % N with gcd(A, N) = 1 seeded by SHA-256) completely destroys linear register flow for decompilers (JEB/Jadx) without register collisions or out-of-bounds wide operations in native execution.",
+    "domain": "Compilers & Language Runtimes",
+    "tags": [
+      "dalvik",
+      "vmp",
+      "reverse-engineering",
+      "obfuscation",
+      "security"
+    ],
+    "recorded_at": "2026-09-27T01:23:12.902405+00:00"
+  },
+  {
+    "fact": "In embedded and native security loaders, raw C string literals for /proc/, /dev/, or binary magics (dex\\n035) are trivially extracted by automated static scanners; strings must be XOR-encoded at compile time and stack buffers immediately wiped using volatile pointer dereferencing (secure_bzero) to prevent compiler dead-code elimination.",
+    "domain": "Kernel & Low-Level Systems",
+    "tags": [
+      "c",
+      "anti-tamper",
+      "memory-safety",
+      "compiler-optimizations",
+      "security"
+    ],
+    "recorded_at": "2026-09-27T01:23:13.288185+00:00"
   }
 ]
