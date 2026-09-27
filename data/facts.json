@@ -67,5 +67,19 @@
       "security"
     ],
     "recorded_at": "2026-09-27T01:23:13.288185+00:00"
+  },
+  {
+    "fact": "Samsung File-Based Encryption (FBE) & Knox On-Device Encryption (ODE) Disabling: Attaining unencrypted storage in custom recoveries (TWRP/OrangeFox) requires four synchronized steps: (1) Neutralizing AVB 2.0 / dm-verity via patched vbmeta (flags 0x3) and patched boot/recovery; (2) Disarming vendor fstab forced encryption by replacing fileencryption= and forceencrypt= with encryptable in /vendor/etc/fstab.{qcom,exynos,mt*} and neutralizing recovery-from-boot.p; (3) Executing TWRP 'Format Data' (make_ext4fs/mkfs.f2fs) to destroy ciphertext and recreate an unencrypted filesystem; (4) Wiping Knox ODE partitions (/keydata, /keyrefuge) to eliminate orphan cryptographic tokens that cause reboot loops.",
+    "domain": "Kernel & Low-Level Systems",
+    "tags": [
+      "samsung",
+      "twrp",
+      "fbe",
+      "encryption",
+      "android-root",
+      "odin",
+      "dm-verity"
+    ],
+    "recorded_at": "2026-09-27T03:22:45.253192+00:00"
   }
 ]

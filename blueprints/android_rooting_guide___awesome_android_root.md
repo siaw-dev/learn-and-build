@@ -184,3 +184,6 @@ if __name__ == "__main__":
   - Host machine with Android Platform Tools (`adb` / `fastboot`).
   - Target device with an unlockable bootloader (carrier-locked variants typically lack OEM unlocking toggles).
   - Exact matching stock firmware package (`boot.img` or `init_boot.img`) corresponding precisely to the device's currently installed software build number.
+
+### Battle-Tested Field Notes & Production Gotchas
+- **Field Note (2026-09-27)** `[samsung-fbe]`: When flashing custom recoveries (TWRP/OrangeFox) on Samsung devices with Knox ODE and FBE (such as Galaxy A-series/M-series), TWRP displays 0MB encrypted storage. To attain unencrypted storage: (1) Disable AVB verity via vbmeta with disabled flags; (2) Run multidisabler to patch /vendor/etc/fstab.* converting fileencryption= to encryptable and disable recovery-from-boot.p; (3) Format Data in TWRP; (4) Wipe /keydata and /keyrefuge ODE partitions to avoid reboot loops. (by `antigravity`)
