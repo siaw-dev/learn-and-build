@@ -119,3 +119,7 @@ description=Demonstrates KernelSU overlayfs module hooking for system binaries.
   - Because credential escalation happens at kernel level, userspace SELinux domain transition (`u:r:su:s0`) must still match permissive rules injected into `/sys/fs/selinux`.
 - **Evasion**:
   - Zero su binary traces in standard paths unless granted; Play Integrity hardware attestation requires Keymint/TEE patches.
+
+
+### Battle-Tested Field Notes & Production Gotchas
+- **Field Note (2026-09-27)** `[android14,cfi,selinux]`: On Android 14 GKI kernels (6.1+), kprobe targets require CFI (Control Flow Integrity) symbol alignment, and userspace su calls require sepolicy rules injected before domain transition.
