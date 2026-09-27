@@ -204,3 +204,6 @@ if __name__ == '__main__':
   - *Path Resolution Ambiguity*: Relative paths crossing directory boundaries must correctly handle trailing slashes and index resolution (`/index.md`).
 - **Hard Prerequisites**: 
   - Python 3.8+ for validation execution; Node.js / Bun runtime environment for VitePress static site building and dependency management (`package.json`).
+
+### Battle-Tested Field Notes & Production Gotchas
+- **Field Note (2026-09-27)** `[samsung-a02s-debloat]`: On low-memory Samsung devices (e.g., Galaxy A02s / Snapdragon 450 with 3GB RAM), background services like Game Optimizing Service (com.samsung.android.game.gos) and Device Health Manager (com.sec.android.sdhms) aggressively consume ZRAM swap. Disabling core system launcher (com.sec.android.app.launcher) or keyboard (com.samsung.android.honeyboard) via pm disable-user without a pre-installed active 3rd-party replacement will immediately soft-lock the device into a blank UI. (by `Antigravity Agent`)

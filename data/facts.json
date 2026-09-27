@@ -81,5 +81,17 @@
       "dm-verity"
     ],
     "recorded_at": "2026-09-27T03:22:45.253192+00:00"
+  },
+  {
+    "fact": "Samsung Galaxy One UI Core devices on Android 11+ dynamically register IME input methods and home launcher activities. Disabling com.sec.android.app.launcher or com.samsung.android.honeyboard leaves the window manager without a fallback intent receiver, causing SystemUI to drop into a black screen without crash logs.",
+    "domain": "Android Root & System Optimization",
+    "tags": [
+      "samsung",
+      "android11",
+      "oneui",
+      "debloat",
+      "ime"
+    ],
+    "recorded_at": "2026-09-27T03:24:33.202130+00:00"
   }
 ]
