@@ -12,7 +12,16 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from curator.config import ALL_CATEGORIES, README_PATH, STATUS_EMOJI, TEMPLATE_PATH
+import json
+from curator.config import (
+    ALL_CATEGORIES,
+    FACTS_PATH,
+    GITHUB_REPO_NAME,
+    GITHUB_USERNAME,
+    README_PATH,
+    STATUS_EMOJI,
+    TEMPLATE_PATH,
+)
 from curator.models import EntryStatus, KnowledgeEntry
 from curator.storage.database import Database
 from curator.storage.json_store import JsonStore
@@ -46,10 +55,9 @@ def _load_all_entries(store) -> dict[str, list[KnowledgeEntry]]:
     return {k: v for k, v in grouped.items() if v}
 
 
-
 def render_readme(db: Database, output_path: Path = README_PATH) -> int:
     """
-    Render the awesome-list README.md from all DB entries.
+    Render the awesome-list README.md from all DB entries and facts.
 
     Args:
         db:          Database instance
@@ -60,6 +68,19 @@ def render_readme(db: Database, output_path: Path = README_PATH) -> int:
     """
     grouped = _load_all_entries(db)
     total = sum(len(v) for v in grouped.values())
+
+    facts = []
+    if FACTS_PATH.exists():
+        try:
+            facts = json.loads(FACTS_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    total_blueprints = sum(1 for v in grouped.values() for e in v if e.blueprint_file)
+    verified_blueprints = sum(
+        1 for v in grouped.values() for e in v
+        if e.blueprint_file and getattr(e, "blueprint_status", None) == "verified"
+    )
 
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATE_PATH.parent)),
@@ -75,6 +96,12 @@ def render_readme(db: Database, output_path: Path = README_PATH) -> int:
         grouped=grouped,
         categories=list(grouped.keys()),
         total=total,
+        facts=facts,
+        facts_count=len(facts),
+        blueprints_count=total_blueprints,
+        verified_count=verified_blueprints,
+        github_username=GITHUB_USERNAME,
+        github_repo_name=GITHUB_REPO_NAME,
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

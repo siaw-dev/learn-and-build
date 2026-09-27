@@ -14,8 +14,8 @@ load_dotenv(_ROOT / ".env")
 # Single key (local dev / backward compat)
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
-GITHUB_USERNAME: str = os.getenv("GITHUB_USERNAME", "")
-GITHUB_REPO_NAME: str = os.getenv("GITHUB_REPO_NAME", "awesome-android-root-kernel")
+GITHUB_USERNAME: str = os.getenv("GITHUB_USERNAME", "siaw-dev")
+GITHUB_REPO_NAME: str = os.getenv("GITHUB_REPO_NAME", "learn-and-build")
 
 # Multi-key pool: reads GEMINI_KEY_1 … GEMINI_KEY_8 (set as GitHub Secrets)
 GEMINI_API_KEYS: list[str] = [
@@ -29,6 +29,7 @@ if not GEMINI_API_KEYS and GEMINI_API_KEY:
 # ── Paths ───────────────────────────────────────────────────────────────────
 DB_PATH: Path = _ROOT / "data" / "knowledge.db"
 JSON_STORE_PATH: Path = _ROOT / "data" / "knowledge.json"
+FACTS_PATH: Path = _ROOT / "data" / "facts.json"
 BLUEPRINTS_DIR: Path = _ROOT / "blueprints"
 README_PATH: Path = _ROOT / "README.md"
 TEMPLATE_PATH: Path = _ROOT / "templates" / "awesome_readme.md.j2"
