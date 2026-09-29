@@ -117,5 +117,18 @@
       "linux-desktop"
     ],
     "recorded_at": "2026-09-29T10:44:26.713579+00:00"
+  },
+  {
+    "fact": "In X11 window management (GNOME Shell/Mutter/Xorg), making an overlay window click-through (mouse penetration) requires setting ShapeInput (kind=2) via libXfixes XFixesSetWindowShapeRegion to an empty region created with XFixesCreateRegion(display, NULL, 0). To restore normal mouse interaction, pass region=0. Furthermore, for already-mapped windows, setting _NET_WM_STATE via xprop is ignored by Mutter; EWMH strictly requires sending an XClientMessage event to the X11 root window with SubstructureRedirectMask, message_type=_NET_WM_STATE, action=1 (_NET_WM_STATE_ADD), and atom=_NET_WM_STATE_ABOVE combined with _NET_WM_STATE_STICKY to persist across all virtual workspaces.",
+    "domain": "Desktop UI & Linux Systems",
+    "tags": [
+      "x11",
+      "ewmh",
+      "libxfixes",
+      "click-through",
+      "always-on-top",
+      "linux-desktop"
+    ],
+    "recorded_at": "2026-09-29T11:22:50.318309+00:00"
   }
 ]
