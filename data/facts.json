@@ -93,5 +93,29 @@
       "ime"
     ],
     "recorded_at": "2026-09-27T03:24:33.202130+00:00"
+  },
+  {
+    "fact": "On MediaTek Helio G85 (MT6769V) eMMC 5.1 devices, Samsung's SSG block I/O scheduler delivers optimal UI latency when tuned for read expiration (read_expire=100ms, write_expire=10000ms, front_merges=0). For SurfaceFlinger UI thread boosting, FIFO realtime scheduling (chrt -f 75) introduces complete system starvation risk; standard nice level elevation (renice -10) paired with realtime I/O class (ionice -c 1) provides frame rate stability without freeze hazards.",
+    "domain": "General",
+    "tags": [
+      "android",
+      "mediatek",
+      "io-scheduler",
+      "surfaceflinger",
+      "galaxy-a06"
+    ],
+    "recorded_at": "2026-09-28T10:22:53.753570+00:00"
+  },
+  {
+    "fact": "In Ubuntu 24.04 and GNOME/GTK4 Python applications lacking python3-gi-cairo, DrawingArea callbacks fail with foreign struct converter errors for cairo.Context. The clean cross-distro solution is rendering to pycairo ImageSurface, wrapping with GLib.Bytes -> Gdk.MemoryTexture, and setting on Gtk.Picture. In addition, AyatanaAppIndicator3 (GTK3) and GTK4 cannot coexist in one Python process; isolating the tray to a child subprocess communicating over non-blocking stdin/stdout JSON pipe provides rock-solid stability.",
+    "domain": "Desktop UI & Linux Systems",
+    "tags": [
+      "gtk4",
+      "libadwaita",
+      "cairo",
+      "system-tray",
+      "linux-desktop"
+    ],
+    "recorded_at": "2026-09-29T10:44:26.713579+00:00"
   }
 ]
