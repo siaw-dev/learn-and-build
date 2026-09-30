@@ -263,5 +263,16 @@
       "human-centered"
     ],
     "recorded_at": "2026-09-30T14:56:58.162510+00:00"
+  },
+  {
+    "fact": "Android VideoView with MediaPlayer throws error (1, -1004) when playing un-muxed DASH WebM/MP4 streams. Returning true from setOnErrorListener suppresses the intrusive system error dialog, allowing a graceful Material 3 fallback UI to prompt opening in VLC or external player.",
+    "domain": "General",
+    "tags": [
+      "android",
+      "videoview",
+      "dash",
+      "mediaplayer"
+    ],
+    "recorded_at": "2026-09-30T15:14:03.368468+00:00"
   }
 ]
