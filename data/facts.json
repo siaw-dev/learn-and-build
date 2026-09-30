@@ -130,5 +130,138 @@
       "linux-desktop"
     ],
     "recorded_at": "2026-09-29T11:22:50.318309+00:00"
+  },
+  {
+    "fact": "In PyQt6 / Qt on Linux X11 and Wayland desktops, overriding only dragEnterEvent is insufficient for reliable file manager drag-and-drop ingestion. dragMoveEvent must also be explicitly overridden and accepted (ev.acceptProposedAction()), and dropEvent must call ev.acceptProposedAction() for desktop environments (GNOME Nautilus, KDE Dolphin) to recognize the target as a valid drop recipient and deliver the payload.",
+    "domain": "General",
+    "tags": [],
+    "recorded_at": "2026-09-29T11:42:00.984281+00:00"
+  },
+  {
+    "fact": "In Linux 'ss' (iproute2) output, UDP sockets omit the 'State' column by default, shifting Local and Peer address columns to indices 2 and 3 (instead of 3 and 4 as in TCP). Additionally, socket process metadata ('users:(...)') must be explicitly isolated before token splitting, and peer endpoints with wildcard ports ('*:*') must be parsed with fallback handling to prevent int conversion exceptions.",
+    "domain": "Linux Networking & Socket Instrumentation",
+    "tags": [
+      "linux",
+      "networking",
+      "ss",
+      "iproute2",
+      "python",
+      "parsing"
+    ],
+    "recorded_at": "2026-09-29T19:16:16.203576+00:00"
+  },
+  {
+    "fact": "When embedding MPV via subprocess and X11/Wayland window ID (--wid) in custom GUI players (PyQt/GTK), MPV will by default scan and execute external user Lua/JS scripts from ~/.config/mpv/scripts/ (such as uosc or autoload) and load user keybindings, causing duplicate on-screen controllers and input collisions. The embedded instance must pass --no-config, --load-scripts=no, --input-default-bindings=no, and --input-vo-keyboard=no to achieve clean isolation.",
+    "domain": "General",
+    "tags": [],
+    "recorded_at": "2026-09-29T19:31:27.087566+00:00"
+  },
+  {
+    "fact": "In GTK4/Libadwaita, never place navigation headers inside a Gtk.Stack page when handling empty states (Adw.StatusPage). Switching pages completely unmaps the controls, trapping the user. Always keep navigation and actions pinned in a permanent outer container above the stack.",
+    "domain": "UI & Native Desktop Frameworks",
+    "tags": [
+      "gtk4",
+      "libadwaita",
+      "python",
+      "ux"
+    ],
+    "recorded_at": "2026-09-29T19:32:50.831308+00:00"
+  },
+  {
+    "fact": "In Qt6 MPV-based video players (libmpv), sending pause=false or toggle_pause when no file is loaded can cause erratic playback state transitions. An idle play handler should guard the engine and resolve the last played track from persistent config, saved playlist active state, or recent file history, loading it with its saved resume timestamp.",
+    "domain": "General",
+    "tags": [
+      "potplayer",
+      "qt6",
+      "mpv",
+      "python",
+      "playback-state"
+    ],
+    "recorded_at": "2026-09-29T19:52:47.501456+00:00"
+  },
+  {
+    "fact": "When embedding MPV into a Qt widget (via --wid), MPV's default --cursor-autohide (1000ms) directly hides the native X11 window cursor without Qt's knowledge, and pointer events are intercepted by MPV. Passing --cursor-autohide=no, --input-cursor=no, and --input-cursor-passthrough=yes allows pointer events to pass through to Qt widgets and delegates cursor visibility and autohiding entirely to the Qt application.",
+    "domain": "General",
+    "tags": [
+      "potplayer",
+      "mpv",
+      "qt6",
+      "x11",
+      "cursor-autohide"
+    ],
+    "recorded_at": "2026-09-29T20:01:40.244203+00:00"
+  },
+  {
+    "fact": "In Libadwaita, never hardcode set_reveal(True) on Adw.ViewSwitcherBar when an Adw.ViewSwitcherTitle is also in Adw.HeaderBar; this creates redundant duplicate top and bottom navigation tabs. Always bind view_switcher_title.bind_property('title-visible', view_switcher_bar, 'reveal', GObject.BindingFlags.SYNC_CREATE) to hide the bottom bar whenever the header tabs fit.",
+    "domain": "UI & Native Desktop Frameworks",
+    "tags": [
+      "gtk4",
+      "libadwaita",
+      "python",
+      "viewswitcher",
+      "ux"
+    ],
+    "recorded_at": "2026-09-29T20:02:32.197867+00:00"
+  },
+  {
+    "fact": "",
+    "domain": "General",
+    "tags": [
+      "gtk4",
+      "libadwaita",
+      "cairo",
+      "python",
+      "pygobject"
+    ],
+    "recorded_at": "2026-09-29T22:20:49.039589+00:00"
+  },
+  {
+    "fact": "When crafting Linux desktop UI with GTK4/Libadwaita: replace mobile bottom bars with centered HeaderBar Adw.ViewSwitcher (WIDE policy, default_width >= 620px to prevent tab truncation); custom Cairo ImageSurface canvases must explicitly poll Adw.StyleManager.get_default().get_dark() to dynamically toggle background gradients and grid contrast for both light and dark Adwaita modes; and attach Gtk.ShortcutController for standard <Ctrl>1-5, <Ctrl>R, and <Ctrl>? shortcuts modal.",
+    "domain": "linux-desktop-ui",
+    "tags": [
+      "gtk4",
+      "libadwaita",
+      "cairo",
+      "gnome-hig"
+    ],
+    "recorded_at": "2026-09-29T23:11:09.221695+00:00"
+  },
+  {
+    "fact": "In GTK4 / Libadwaita, Gtk.Picture displaying a Gdk.MemoryTexture (e.g. from a Cairo ImageSurface) defaults to can_shrink=False. This enforces an intrinsic minimum width equal to the pixel buffer width (e.g. 520px), preventing the parent container or window from shrinking below that dimension and causing layout blowout. Always explicitly call picture.set_can_shrink(True) and picture.set_content_fit(Gtk.ContentFit.FILL).",
+    "domain": "Linux Desktop & GUI Systems",
+    "tags": [
+      "gtk4",
+      "libadwaita",
+      "cairo",
+      "gdk",
+      "responsive",
+      "layout-overflow"
+    ],
+    "recorded_at": "2026-09-30T14:56:50.814777+00:00"
+  },
+  {
+    "fact": "In GTK4, a Gtk.Label with hexpand=True will NOT yield or shrink below its full text natural width in horizontal box or grid allocations unless label.set_ellipsize(Pango.EllipsizeMode.END) is explicitly set. Dynamic process names, URLs, or paths without ellipsize force sibling widgets off-screen.",
+    "domain": "Linux Desktop & GUI Systems",
+    "tags": [
+      "gtk4",
+      "pango",
+      "ellipsize",
+      "label",
+      "responsive",
+      "gui-layout"
+    ],
+    "recorded_at": "2026-09-30T14:56:54.435888+00:00"
+  },
+  {
+    "fact": "In human-centered system monitoring interfaces, raw hardware/kernel device descriptors (e.g., 'enx1ad79c250a5f', 'wlp2s0', sysfs power nodes) must never be displayed as primary hero UI metrics. They must be translated to clear human mental models ('Wired Ethernet', 'Wi-Fi Network', 'Secure VPN') with raw technical identifiers relegated to secondary captions or tooltips.",
+    "domain": "Human-Centered Product Engineering",
+    "tags": [
+      "hci",
+      "ux-design",
+      "linux-networking",
+      "telemetry",
+      "human-centered"
+    ],
+    "recorded_at": "2026-09-30T14:56:58.162510+00:00"
   }
 ]
