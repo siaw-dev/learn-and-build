@@ -274,5 +274,120 @@
       "mediaplayer"
     ],
     "recorded_at": "2026-09-30T15:14:03.368468+00:00"
+  },
+  {
+    "fact": "Facebook Lite video streams with VP9 vencode tags are packaged in ISO Base Media / MP4 containers (ftyp: isom/mp41/dash/vp09) rather than Matroska containers. Saving them with .webm causes Stagefright MatroskaExtractor to reject them with an 'unsupported file type' error. They must be saved with .mp4 extension and played using Jetpack Media3 ExoPlayer, which contains native Fmp4/Mp4 extractors supporting the vp09 sample entry.",
+    "domain": "General",
+    "tags": [
+      "facebook-lite",
+      "dash",
+      "vp9",
+      "isobmff",
+      "exoplayer",
+      "stagefright"
+    ],
+    "recorded_at": "2026-09-30T16:00:30.298624+00:00"
+  },
+  {
+    "fact": "",
+    "domain": "linux_desktop_qt",
+    "tags": [
+      "pyqt6",
+      "qt",
+      "mpv",
+      "ipc",
+      "testing"
+    ],
+    "recorded_at": "2026-09-30T16:38:52.598301+00:00"
+  },
+  {
+    "fact": "Jetpack Media3 Transformer requires OpenGL ES shaders (shaders/vertex_shader_transformation_es2.glsl) loaded via context.getAssets().open(). When executed inside a hooked host process via Xposed/LSPosed, context.getAssets() points to the host app APK where Media3 assets do not exist, throwing a FileNotFoundException. To resolve, wrap the application context with a ContextWrapper that overrides getAssets() using createPackageContext(modulePackage, CONTEXT_IGNORE_SECURITY or CONTEXT_INCLUDE_CODE).assets. Additionally, Android 11 MPEG4Extractor.cpp fails on VP9 in MP4 boxes (video/unknown); Media3 Transformer bypasses this with user-space track extractors.",
+    "domain": "Android Media Frameworks & Xposed Hooking",
+    "tags": [
+      "media3",
+      "transformer",
+      "xposed",
+      "android-media",
+      "lsposed",
+      "dash-muxing"
+    ],
+    "recorded_at": "2026-09-30T17:17:01.759949+00:00"
+  },
+  {
+    "fact": "",
+    "domain": "General",
+    "tags": [
+      "qt6",
+      "x11",
+      "mpv",
+      "always-on-top",
+      "ewmh",
+      "embedded-vo"
+    ],
+    "recorded_at": "2026-09-30T17:56:49.962996+00:00"
+  },
+  {
+    "fact": "",
+    "domain": "General",
+    "tags": [
+      "qt6",
+      "qlocalserver",
+      "single-instance",
+      "ipc",
+      "mpv",
+      "linux-desktop"
+    ],
+    "recorded_at": "2026-09-30T18:11:15.434303+00:00"
+  },
+  {
+    "fact": "",
+    "domain": "General",
+    "tags": [
+      "qt6",
+      "x11",
+      "osd",
+      "mpv",
+      "wa-opaquepaintevent",
+      "ghosting",
+      "linux-desktop"
+    ],
+    "recorded_at": "2026-09-30T18:27:51.513597+00:00"
+  },
+  {
+    "fact": "In Qt/X11 video players embedding MPV via wid (window ID), dynamically altering window flags via QWidget.setWindowFlags() destroys and recreates the underlying X11 window surface, crashing MPV with BadWindow. Stay-on-top must instead be toggled dynamically via libX11 sending an EWMH _NET_WM_STATE ClientMessage (_NET_WM_STATE_ADD / _NET_WM_STATE_REMOVE with _NET_WM_STATE_ABOVE) to preserve the native surface.",
+    "domain": "GUI & Graphics Systems",
+    "tags": [
+      "qt6",
+      "x11",
+      "mpv",
+      "window-manager",
+      "ewmh"
+    ],
+    "recorded_at": "2026-09-30T19:32:29.278295+00:00"
+  },
+  {
+    "fact": "When embedding a video renderer inside a QWidget configured with WA_OpaquePaintEvent=True without paintEvent, alien child overlay widgets (such as text or volume HUDs) cause pixel ghosting when shrinking or changing text size because Qt backing-store dirty rect clipping leaves unrepainted regions. Decoupling HUD overlays into independent top-level Qt.WindowType.Tool frameless transparent windows (WA_TranslucentBackground) delegates composition to the desktop window manager, completely eliminating ghosting artifacts.",
+    "domain": "GUI & Graphics Systems",
+    "tags": [
+      "qt6",
+      "compositor",
+      "osd",
+      "rendering",
+      "ghosting"
+    ],
+    "recorded_at": "2026-09-30T19:32:38.242079+00:00"
+  },
+  {
+    "fact": "In Linux network telemetry and bandwidth quota meters, socket parsers (such as ss or /proc/net/tcp) must explicitly filter loopback endpoints (127.0.0.0/8, ::1, localhost) to prevent local inter-process communication (LSP servers, ADB, compiler RPCs) from contaminating external internet quota accounting. Furthermore, time-series snapshot tables must atomically delete aggregated records during periodic rollup to guarantee query idempotency across UNION ALL operations.",
+    "domain": "Linux Desktop & GUI Systems",
+    "tags": [
+      "networking",
+      "telemetry",
+      "loopback",
+      "sqlite",
+      "aggregation",
+      "idempotency"
+    ],
+    "recorded_at": "2026-09-30T20:00:33.575561+00:00"
   }
 ]
