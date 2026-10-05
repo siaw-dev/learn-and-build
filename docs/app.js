@@ -118,9 +118,11 @@ async function loadKnowledgeVault() {
     if (!res || !res.ok) {
       res = await fetch('../data/knowledge.json?t=' + Date.now()).catch(() => null);
     }
+    let networkSuccess = false;
     if (res && res.ok) {
       const data = await res.json();
       state.entries = Array.isArray(data) ? data : [];
+      networkSuccess = true;
     }
 
     // 2. Fetch Engineering Facts & Discoveries
@@ -131,6 +133,11 @@ async function loadKnowledgeVault() {
     if (resFacts && resFacts.ok) {
       const factsData = await resFacts.json();
       state.facts = Array.isArray(factsData) ? factsData : [];
+      networkSuccess = true;
+    }
+
+    if (!networkSuccess) {
+      throw new Error(`Could not reach repository ${cfg.owner}/${cfg.repo} or local fallback data`);
     }
     
     // Update Header Counts
@@ -157,8 +164,9 @@ async function loadKnowledgeVault() {
     console.error('Failed to load vault data:', err);
     document.getElementById('cards-container').innerHTML = `
       <div class="empty-state">
-        <p>Could not connect to repository <strong>${escHtml(cfg.owner)}/${escHtml(cfg.repo)}</strong>.</p>
-        <button id="retry-load-btn" class="btn btn-secondary btn-sm">Check Connection &amp; Retry</button>
+        <p>Could not load vault data for <strong>${escHtml(cfg.owner)}/${escHtml(cfg.repo)}</strong>.</p>
+        <p class="field-hint" style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.25rem;">${escHtml(err.message || 'Check network connection or repository permissions.')}</p>
+        <button id="retry-load-btn" class="btn btn-secondary btn-sm" style="margin-top: 0.75rem;">Check Connection &amp; Retry</button>
       </div>
     `;
     document.getElementById('retry-load-btn')?.addEventListener('click', loadKnowledgeVault);
@@ -308,9 +316,9 @@ function renderCards() {
   // Category filter
   if (state.selectedCategory !== 'all') {
     filtered = filtered.filter(e => e.category === state.selectedCategory);
-    viewTitle.textContent = state.selectedCategory;
+    if (viewTitle) viewTitle.textContent = state.selectedCategory;
   } else {
-    viewTitle.textContent = 'All Vault Resources';
+    if (viewTitle) viewTitle.textContent = 'All Vault Resources';
   }
 
   // Source filter
