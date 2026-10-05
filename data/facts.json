@@ -204,18 +204,6 @@
     "recorded_at": "2026-09-29T20:02:32.197867+00:00"
   },
   {
-    "fact": "",
-    "domain": "General",
-    "tags": [
-      "gtk4",
-      "libadwaita",
-      "cairo",
-      "python",
-      "pygobject"
-    ],
-    "recorded_at": "2026-09-29T22:20:49.039589+00:00"
-  },
-  {
     "fact": "When crafting Linux desktop UI with GTK4/Libadwaita: replace mobile bottom bars with centered HeaderBar Adw.ViewSwitcher (WIDE policy, default_width >= 620px to prevent tab truncation); custom Cairo ImageSurface canvases must explicitly poll Adw.StyleManager.get_default().get_dark() to dynamically toggle background gradients and grid contrast for both light and dark Adwaita modes; and attach Gtk.ShortcutController for standard <Ctrl>1-5, <Ctrl>R, and <Ctrl>? shortcuts modal.",
     "domain": "linux-desktop-ui",
     "tags": [
@@ -289,18 +277,6 @@
     "recorded_at": "2026-09-30T16:00:30.298624+00:00"
   },
   {
-    "fact": "",
-    "domain": "linux_desktop_qt",
-    "tags": [
-      "pyqt6",
-      "qt",
-      "mpv",
-      "ipc",
-      "testing"
-    ],
-    "recorded_at": "2026-09-30T16:38:52.598301+00:00"
-  },
-  {
     "fact": "Jetpack Media3 Transformer requires OpenGL ES shaders (shaders/vertex_shader_transformation_es2.glsl) loaded via context.getAssets().open(). When executed inside a hooked host process via Xposed/LSPosed, context.getAssets() points to the host app APK where Media3 assets do not exist, throwing a FileNotFoundException. To resolve, wrap the application context with a ContextWrapper that overrides getAssets() using createPackageContext(modulePackage, CONTEXT_IGNORE_SECURITY or CONTEXT_INCLUDE_CODE).assets. Additionally, Android 11 MPEG4Extractor.cpp fails on VP9 in MP4 boxes (video/unknown); Media3 Transformer bypasses this with user-space track extractors.",
     "domain": "Android Media Frameworks & Xposed Hooking",
     "tags": [
@@ -312,46 +288,6 @@
       "dash-muxing"
     ],
     "recorded_at": "2026-09-30T17:17:01.759949+00:00"
-  },
-  {
-    "fact": "",
-    "domain": "General",
-    "tags": [
-      "qt6",
-      "x11",
-      "mpv",
-      "always-on-top",
-      "ewmh",
-      "embedded-vo"
-    ],
-    "recorded_at": "2026-09-30T17:56:49.962996+00:00"
-  },
-  {
-    "fact": "",
-    "domain": "General",
-    "tags": [
-      "qt6",
-      "qlocalserver",
-      "single-instance",
-      "ipc",
-      "mpv",
-      "linux-desktop"
-    ],
-    "recorded_at": "2026-09-30T18:11:15.434303+00:00"
-  },
-  {
-    "fact": "",
-    "domain": "General",
-    "tags": [
-      "qt6",
-      "x11",
-      "osd",
-      "mpv",
-      "wa-opaquepaintevent",
-      "ghosting",
-      "linux-desktop"
-    ],
-    "recorded_at": "2026-09-30T18:27:51.513597+00:00"
   },
   {
     "fact": "In Qt/X11 video players embedding MPV via wid (window ID), dynamically altering window flags via QWidget.setWindowFlags() destroys and recreates the underlying X11 window surface, crashing MPV with BadWindow. Stay-on-top must instead be toggled dynamically via libX11 sending an EWMH _NET_WM_STATE ClientMessage (_NET_WM_STATE_ADD / _NET_WM_STATE_REMOVE with _NET_WM_STATE_ABOVE) to preserve the native surface.",
